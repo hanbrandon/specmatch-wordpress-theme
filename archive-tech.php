@@ -23,9 +23,9 @@ if ($active_brand) {
         </div>
     </header>
     <?php ps_category_brand_filter($type); ?>
-    <?php ps_catalog_tools($type); ?>
     <div class="archive-catalog-layout">
         <div class="archive-catalog-main">
+            <?php ps_catalog_tools($type); ?>
             <?php if (have_posts()) : ?>
                 <section class="tech-grid" data-catalog-view>
                     <?php

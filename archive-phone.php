@@ -1,14 +1,14 @@
 <?php get_header(); ?>
 <main class="site-main shell" id="main-content">
     <?php ps_breadcrumbs(true); ?>
-    <header class="archive-header">
+    <header class="archive-header archive-header--catalog">
         <p class="eyebrow">전체 스마트폰 데이터베이스</p>
         <h1>전체 휴대폰</h1>
     </header>
     <?php ps_category_brand_filter('phone'); ?>
-    <?php ps_catalog_tools('phone'); ?>
     <div class="archive-catalog-layout">
         <div class="archive-catalog-main">
+            <?php ps_catalog_tools('phone'); ?>
             <div class="phone-grid" data-catalog-view>
                 <?php $rank = ((max(1, get_query_var('paged')) - 1) * (int) get_option('posts_per_page')) + 1; ?>
                 <?php while (have_posts()) : the_post(); ?>

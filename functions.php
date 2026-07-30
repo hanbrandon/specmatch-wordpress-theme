@@ -396,10 +396,10 @@ function ps_catalog_tools(string $post_type): void
 function ps_catalog_view_switcher(string $post_type): void
 {
     ?>
-    <div class="catalog-view-switcher" role="group" aria-label="목록 보기 방식" data-catalog-view-switcher data-view-key="<?php echo esc_attr($post_type); ?>">
-        <span>보기</span>
-        <button type="button" class="is-active" data-catalog-view-mode="grid" aria-pressed="true"><i aria-hidden="true"></i>썸네일</button>
-        <button type="button" data-catalog-view-mode="compact" aria-pressed="false"><i aria-hidden="true"></i>간략</button>
+    <div class="catalog-view-switcher" data-catalog-view-switcher data-view-key="<?php echo esc_attr($post_type); ?>">
+        <button type="button" data-catalog-view-toggle aria-label="간략 보기로 전환" title="간략 보기로 전환">
+            <i aria-hidden="true"></i>
+        </button>
     </div>
     <?php
 }

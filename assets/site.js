@@ -259,18 +259,17 @@
 (() => {
   document.querySelectorAll("[data-catalog-view-switcher]").forEach((switcher) => {
     const target = document.querySelector("[data-catalog-view]");
-    const buttons = [...switcher.querySelectorAll("[data-catalog-view-mode]")];
-    if (!target || !buttons.length) return;
+    const button = switcher.querySelector("[data-catalog-view-toggle]");
+    if (!target || !button) return;
 
     const storageKey = `specmatch-catalog-view-${switcher.dataset.viewKey || "catalog"}`;
     const setView = (mode) => {
       const compact = mode === "compact";
       target.classList.toggle("is-compact", compact);
-      buttons.forEach((button) => {
-        const active = button.dataset.catalogViewMode === mode;
-        button.classList.toggle("is-active", active);
-        button.setAttribute("aria-pressed", String(active));
-      });
+      button.classList.toggle("is-compact", compact);
+      const actionLabel = compact ? "썸네일 보기로 전환" : "간략 보기로 전환";
+      button.setAttribute("aria-label", actionLabel);
+      button.setAttribute("title", actionLabel);
       try {
         localStorage.setItem(storageKey, mode);
       } catch (error) {
@@ -286,8 +285,8 @@
     }
     setView(initialView);
 
-    buttons.forEach((button) => {
-      button.addEventListener("click", () => setView(button.dataset.catalogViewMode));
+    button.addEventListener("click", () => {
+      setView(target.classList.contains("is-compact") ? "grid" : "compact");
     });
   });
 })();

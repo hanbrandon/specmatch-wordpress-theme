@@ -1,14 +1,14 @@
 <?php get_header(); ?>
 <main class="site-main shell" id="main-content">
     <?php ps_breadcrumbs(true); ?>
-    <header class="archive-header">
+    <header class="archive-header archive-header--catalog">
         <p class="eyebrow">브랜드별 스마트폰</p>
         <h1><?php single_term_title(); ?></h1>
     </header>
     <?php ps_category_brand_filter('phone'); ?>
-    <?php ps_catalog_tools('phone'); ?>
     <div class="brand-catalog-layout">
         <div class="brand-catalog-main">
+            <?php ps_catalog_tools('phone'); ?>
             <div class="phone-grid" data-catalog-view>
                 <?php $rank = 1; while (have_posts()) : the_post(); ?>
                     <?php ps_phone_card(get_post(), $rank++); ?>
