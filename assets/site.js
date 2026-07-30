@@ -257,6 +257,42 @@
 })();
 
 (() => {
+  document.querySelectorAll("[data-catalog-view-switcher]").forEach((switcher) => {
+    const target = document.querySelector("[data-catalog-view]");
+    const buttons = [...switcher.querySelectorAll("[data-catalog-view-mode]")];
+    if (!target || !buttons.length) return;
+
+    const storageKey = `specmatch-catalog-view-${switcher.dataset.viewKey || "catalog"}`;
+    const setView = (mode) => {
+      const compact = mode === "compact";
+      target.classList.toggle("is-compact", compact);
+      buttons.forEach((button) => {
+        const active = button.dataset.catalogViewMode === mode;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      try {
+        localStorage.setItem(storageKey, mode);
+      } catch (error) {
+        // The control still works when browser storage is unavailable.
+      }
+    };
+
+    let initialView = "grid";
+    try {
+      initialView = localStorage.getItem(storageKey) === "compact" ? "compact" : "grid";
+    } catch (error) {
+      initialView = "grid";
+    }
+    setView(initialView);
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => setView(button.dataset.catalogViewMode));
+    });
+  });
+})();
+
+(() => {
   document.querySelectorAll("[data-brand-filter]").forEach((filter) => {
     const toggle = filter.querySelector("[data-brand-filter-toggle]");
     const options = filter.querySelector("[data-brand-filter-options]");

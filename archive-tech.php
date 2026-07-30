@@ -27,15 +27,12 @@ if ($active_brand) {
     <div class="archive-catalog-layout">
         <div class="archive-catalog-main">
             <?php if (have_posts()) : ?>
-                <section class="tech-index-list">
-                    <header class="tech-index-list__head">
-                        <span>번호</span><span>브랜드</span><span>제품명</span><span>출시일</span><span>평가 점수</span>
-                    </header>
+                <section class="tech-grid" data-catalog-view>
                     <?php
                     $rank = ((max(1, (int) get_query_var('paged')) - 1) * (int) get_query_var('posts_per_page')) + 1;
                     while (have_posts()) :
                         the_post();
-                        ps_tech_compact_row(get_post(), $rank++);
+                        ps_tech_card(get_post(), $rank++);
                     endwhile;
                     ?>
                 </section>

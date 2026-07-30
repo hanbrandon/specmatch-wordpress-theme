@@ -9,7 +9,7 @@
     <?php ps_catalog_tools('phone'); ?>
     <div class="archive-catalog-layout">
         <div class="archive-catalog-main">
-            <div class="phone-grid">
+            <div class="phone-grid" data-catalog-view>
                 <?php $rank = ((max(1, get_query_var('paged')) - 1) * (int) get_option('posts_per_page')) + 1; ?>
                 <?php while (have_posts()) : the_post(); ?>
                     <?php ps_phone_card(get_post(), $rank++); ?>

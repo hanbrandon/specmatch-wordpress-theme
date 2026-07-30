@@ -388,22 +388,61 @@ function ps_catalog_tools(string $post_type): void
     echo '<div class="catalog-tools__panel" id="' . esc_attr($panel_id) . '" data-catalog-tools-panel>';
     ps_catalog_filter_controls($post_type);
     ps_catalog_sorting_controls($post_type);
-    echo '</div></div>';
+    echo '</div>';
+    ps_catalog_view_switcher($post_type);
+    echo '</div>';
+}
+
+function ps_catalog_view_switcher(string $post_type): void
+{
+    ?>
+    <div class="catalog-view-switcher" role="group" aria-label="목록 보기 방식" data-catalog-view-switcher data-view-key="<?php echo esc_attr($post_type); ?>">
+        <span>보기</span>
+        <button type="button" class="is-active" data-catalog-view-mode="grid" aria-pressed="true"><i aria-hidden="true"></i>썸네일</button>
+        <button type="button" data-catalog-view-mode="compact" aria-pressed="false"><i aria-hidden="true"></i>간략</button>
+    </div>
+    <?php
+}
+
+function ps_catalog_display_date(int $post_id, string $fallback = ''): string
+{
+    $normalized = trim((string) get_post_meta($post_id, '_catalog_release_date', true));
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $normalized)) {
+        return $normalized;
+    }
+    $fallback = trim($fallback);
+    if (!$fallback) {
+        return '';
+    }
+    if (preg_match('/\b((?:19|20)\d{2})-(\d{2})-(\d{2})\b/', $fallback, $match)) {
+        return $match[1] . '-' . $match[2] . '-' . $match[3];
+    }
+    if (preg_match(
+        '/(?:\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}\b|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\b)/i',
+        $fallback
+    )) {
+        $timestamp = strtotime($fallback);
+        if ($timestamp !== false) {
+            return wp_date('Y-m-d', $timestamp);
+        }
+    }
+    return '';
 }
 
 function ps_phone_card(?WP_Post $post = null, int $rank = 0): void
 {
     $post = $post ?: get_post();
     $device = function_exists('pc_get_device') ? pc_get_device((int) $post->ID) : null;
+    $display_date = ps_catalog_display_date((int) $post->ID, (string) ($device?->announced ?? ''));
     ?>
     <article class="phone-card">
         <span class="rank"><?php echo esc_html(str_pad((string) $rank, 2, '0', STR_PAD_LEFT)); ?></span>
         <?php if (pc_public_image_url($device)) : ?>
-            <img loading="lazy" decoding="async" width="300" height="220" src="<?php echo esc_url(pc_public_image_url($device)); ?>" alt="<?php echo esc_attr($post->post_title); ?>">
+            <img loading="lazy" fetchpriority="low" decoding="async" width="300" height="220" src="<?php echo esc_url(pc_public_image_url($device)); ?>" alt="<?php echo esc_attr($post->post_title); ?>">
         <?php endif; ?>
-        <p><?php echo esc_html($device?->brand ?: '스마트폰'); ?></p>
+        <p class="phone-card__brand"><?php echo esc_html($device?->brand ?: '스마트폰'); ?></p>
         <h3><?php echo esc_html($post->post_title); ?></h3>
-        <p><?php echo esc_html($device?->announced ?: '상세 스펙 확인'); ?></p>
+        <p class="phone-card__date"><?php echo esc_html($display_date ?: '날짜 미상'); ?></p>
         <a href="<?php echo esc_url(get_permalink($post)); ?>"<?php echo is_search() ? ' data-track-event="search_click" data-track-post="' . esc_attr((string) $post->ID) . '"' : ''; ?>><?php echo esc_html($post->post_title); ?> 보기</a>
     </article>
     <?php
@@ -415,6 +454,7 @@ function ps_tech_card(?WP_Post $post = null, int $rank = 0): void
     $type = get_post_type($post);
     $labels = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽카드'];
     $score = get_post_meta($post->ID, '_tech_score', true);
+    $display_date = ps_catalog_display_date((int) $post->ID, (string) get_post_meta($post->ID, '_tech_launched', true));
     ?>
     <article class="tech-card">
         <div class="tech-card__meta">
@@ -423,15 +463,16 @@ function ps_tech_card(?WP_Post $post = null, int $rank = 0): void
         </div>
         <?php $image_url = get_post_meta($post->ID, '_tech_image_url', true); ?>
         <?php if ($image_url) : ?>
-            <div class="tech-card__image"><img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($post->post_title); ?>" width="300" height="150" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>
+            <div class="tech-card__image"><img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($post->post_title); ?>" width="300" height="150" loading="lazy" fetchpriority="low" decoding="async" referrerpolicy="no-referrer"></div>
         <?php elseif (has_post_thumbnail($post)) : ?>
-            <?php echo get_the_post_thumbnail($post, 'medium', ['loading' => 'lazy', 'decoding' => 'async']); ?>
+            <?php echo get_the_post_thumbnail($post, 'medium', ['loading' => 'lazy', 'fetchpriority' => 'low', 'decoding' => 'async']); ?>
         <?php else : ?>
             <div class="tech-card__glyph" aria-hidden="true"><?php echo esc_html($type === 'laptop' ? '▱' : ($type === 'cpu' ? '◇' : '▰')); ?></div>
         <?php endif; ?>
         <div>
             <h3><?php echo esc_html($post->post_title); ?></h3>
             <p><?php echo esc_html(get_the_excerpt($post) ?: '상세 사양과 성능 데이터를 확인하세요.'); ?></p>
+            <?php if ($display_date) : ?><time class="tech-card__date" datetime="<?php echo esc_attr($display_date); ?>"><?php echo esc_html($display_date); ?></time><?php endif; ?>
         </div>
         <?php if ($score !== '') : ?><strong class="tech-card__score"><?php echo esc_html($score); ?><small>/100</small></strong><?php endif; ?>
         <a href="<?php echo esc_url(get_permalink($post)); ?>"<?php echo is_search() ? ' data-track-event="search_click" data-track-post="' . esc_attr((string) $post->ID) . '"' : ''; ?>><?php echo esc_html($post->post_title); ?> 보기</a>
@@ -618,13 +659,13 @@ function ps_tech_compact_row(?WP_Post $post = null, int $rank = 0): void
     $brands = get_the_terms($post, 'hardware_brand');
     $brand = $brands && !is_wp_error($brands) ? $brands[0]->name : strtoupper($type);
     $score = get_post_meta($post->ID, '_tech_score', true);
-    $launched = get_post_meta($post->ID, '_tech_launched', true);
+    $launched = ps_catalog_display_date((int) $post->ID, (string) get_post_meta($post->ID, '_tech_launched', true));
     ?>
     <article class="tech-index-row">
         <span class="tech-index-row__rank"><?php echo esc_html(str_pad((string) $rank, 3, '0', STR_PAD_LEFT)); ?></span>
         <span class="tech-index-row__brand"><?php echo esc_html($brand); ?></span>
         <h2><a href="<?php echo esc_url(get_permalink($post)); ?>"><?php echo esc_html($post->post_title); ?></a></h2>
-        <?php if ($launched) : ?><time><?php echo esc_html($launched); ?></time><?php endif; ?>
+        <?php if ($launched) : ?><time datetime="<?php echo esc_attr($launched); ?>"><?php echo esc_html($launched); ?></time><?php endif; ?>
         <strong><?php echo $score !== '' ? esc_html($score) . '<small>/100</small>' : '<small>상세 보기</small>'; ?></strong>
     </article>
     <?php
