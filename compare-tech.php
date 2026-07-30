@@ -25,7 +25,7 @@ $type_labels = ['laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU'];
         </header>
         <section class="compare-identities">
             <?php foreach ([$product_a, $product_b] as $product) :
-                $image = (string) get_post_meta($product->ID, '_tech_image_url', true);
+                $image = function_exists('pc_public_tech_image_url') ? (string) pc_public_tech_image_url((int) $product->ID) : '';
                 $brands = wp_get_post_terms($product->ID, 'hardware_brand', ['fields' => 'names']);
             ?>
                 <article>

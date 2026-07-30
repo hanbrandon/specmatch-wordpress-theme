@@ -461,7 +461,7 @@ function ps_tech_card(?WP_Post $post = null, int $rank = 0): void
             <span><?php echo esc_html(str_pad((string) $rank, 2, '0', STR_PAD_LEFT)); ?></span>
             <small><?php echo esc_html($labels[$type] ?? strtoupper((string) $type)); ?></small>
         </div>
-        <?php $image_url = get_post_meta($post->ID, '_tech_image_url', true); ?>
+        <?php $image_url = function_exists('pc_public_tech_image_url') ? pc_public_tech_image_url((int) $post->ID) : null; ?>
         <?php if ($image_url) : ?>
             <div class="tech-card__image"><img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($post->post_title); ?>" width="300" height="150" loading="lazy" fetchpriority="low" decoding="async" referrerpolicy="no-referrer"></div>
         <?php elseif (has_post_thumbnail($post)) : ?>
@@ -632,7 +632,7 @@ function ps_recent_products_section(int $post_id): void
         $device = pc_get_device($post_id);
         $image = $device ? (string) pc_public_image_url($device) : '';
     } else {
-        $image = (string) get_post_meta($post_id, '_tech_image_url', true);
+        $image = function_exists('pc_public_tech_image_url') ? (string) pc_public_tech_image_url($post_id) : '';
     }
     $product = [
         'id' => $post_id,
@@ -816,7 +816,7 @@ function ps_tech_sidebar_widget(string $title, string $mode, string $post_type, 
             <?php foreach ($posts as $index => $post) :
                 $brands = wp_get_post_terms($post->ID, 'hardware_brand', ['fields' => 'names']);
                 $brand = !is_wp_error($brands) ? ($brands[0] ?? strtoupper($post_type)) : strtoupper($post_type);
-                $image = (string) get_post_meta($post->ID, '_tech_image_url', true);
+                $image = function_exists('pc_public_tech_image_url') ? (string) pc_public_tech_image_url((int) $post->ID) : '';
             ?>
                 <li>
                     <a href="<?php echo esc_url(get_permalink($post)); ?>">

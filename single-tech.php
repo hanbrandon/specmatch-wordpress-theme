@@ -15,7 +15,7 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
             </header>
             <div class="tech-detail__body">
                 <?php
-                $image = get_post_meta(get_the_ID(), '_tech_image_url', true);
+                $image = function_exists('pc_public_tech_image_url') ? pc_public_tech_image_url(get_the_ID()) : null;
                 $scores = json_decode((string) get_post_meta(get_the_ID(), '_tech_scores', true), true) ?: [];
                 $configurations = json_decode((string) get_post_meta(get_the_ID(), '_tech_configurations', true), true) ?: [];
                 $specs = json_decode((string) get_post_meta(get_the_ID(), '_tech_specs', true), true) ?: [];
