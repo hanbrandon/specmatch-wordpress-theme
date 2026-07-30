@@ -3,7 +3,7 @@ Theme Name: SpecMatch
 Theme URI: https://specmatch.tech/
 Author: SpecMatch
 Description: 한국어 휴대폰 스펙, 비교, 구매 가이드를 위한 편집형 테마
-Version: 1.0.38
+Version: 1.0.39
 Requires at least: 6.6
 Requires PHP: 8.1
 Text Domain: phone-seoul
@@ -1297,7 +1297,8 @@ body::before {
   .site-nav.is-open { top: 60px; max-height: calc(100dvh - 60px); }
   .brand-mark { font-size: 15px; }
   .header-actions { gap: 5px; }
-  .header-compare { display: inline-flex; min-height: 40px; padding: 0 7px; align-items: center; font-size: 10px; }
+  .header-compare { display: inline-flex; min-height: 40px; padding: 0 12px; align-items: center; background: var(--blue); color: white; font-size: 10px; }
+  .header-compare:hover { background: var(--ink); color: white; }
   .header-search, .header-search b, .menu-toggle { width: 40px; height: 40px; }
   .menu-toggle { flex-basis: 40px; }
   .header-search { padding-left: 0; border-left: 0; }
@@ -1351,10 +1352,13 @@ body::before {
   .catalog-panel > b { right: 18px; bottom: 14px; }
   .section-heading { margin-top: 75px; }
   .section-heading h2 { font-size: 31px; }
-  .catalog-archive-hero { min-height: 320px; padding: 55px 0 35px; }
-  .catalog-archive-hero h1 { font-size: 72px; }
-  .catalog-archive-hero > div { grid-template-columns: 90px 1fr; }
-  .catalog-archive-hero strong { font-size: 38px; }
+  .breadcrumbs { padding-top: 13px; }
+  .catalog-archive-hero { min-height: 0; gap: 18px; padding: 28px 0 26px; }
+  .catalog-archive-hero > p { font-size: 9px; }
+  .catalog-archive-hero h1 { font-size: clamp(50px, 14vw, 64px); line-height: .86; }
+  .catalog-archive-hero > div { display: block; }
+  .catalog-archive-hero strong { display: none; }
+  .catalog-archive-hero span { display: block; max-width: 42ch; font-size: 11px; line-height: 1.65; }
   .catalog-loading { margin-top: 30px; padding: 35px 22px; }
   .catalog-loading h2 { font-size: 31px; }
   .tech-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1572,7 +1576,7 @@ body::before {
   }
   .category-brand-filter__options a:nth-child(2n) { border-right: 0; }
 
-  .catalog-tools { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; margin: 0 0 24px; }
+  .catalog-tools { display: grid; grid-template-columns: minmax(0, 1fr) 50px; gap: 8px; margin: 0 0 24px; }
   .catalog-tools__toggle {
     min-height: 50px;
     padding: 0 15px;
@@ -1581,8 +1585,8 @@ body::before {
   .catalog-tools__toggle > span { font-size: 13px; }
   .catalog-tools__panel { grid-column: 1 / -1; padding: 14px; }
   .catalog-tools__panel.is-open { display: grid; gap: 16px; }
-  .catalog-view-switcher { width: 44px; margin: 0; }
-  .catalog-view-switcher button { border-left: 1px solid var(--line); }
+  .catalog-view-switcher { width: 50px; margin: 0; }
+  .catalog-view-switcher button { width: 50px; min-height: 50px; border-left: 1px solid var(--line); }
   .catalog-filter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 8px; }
   .catalog-filter__keyword { grid-column: 1 / -1; }
   .catalog-filter__select,
