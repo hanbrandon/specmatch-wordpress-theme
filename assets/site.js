@@ -257,6 +257,30 @@
 })();
 
 (() => {
+  document.querySelectorAll("[data-brand-filter]").forEach((filter) => {
+    const toggle = filter.querySelector("[data-brand-filter-toggle]");
+    const options = filter.querySelector("[data-brand-filter-options]");
+    if (!toggle || !options) return;
+
+    const setOpen = (open) => {
+      toggle.setAttribute("aria-expanded", String(open));
+      options.classList.toggle("is-open", open);
+    };
+
+    toggle.addEventListener("click", () => {
+      setOpen(toggle.getAttribute("aria-expanded") !== "true");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+  });
+})();
+
+(() => {
   document.querySelectorAll("[data-catalog-tools]").forEach((tools) => {
     const toggle = tools.querySelector("[data-catalog-tools-toggle]");
     const panel = tools.querySelector("[data-catalog-tools-panel]");

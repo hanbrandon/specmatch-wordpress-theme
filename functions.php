@@ -261,12 +261,17 @@ function ps_category_brand_filter(string $post_type): void
         ? (string) get_queried_object()->name
         : ucwords(str_replace('-', ' ', sanitize_text_field((string) get_query_var('tech_brand'))));
     ?>
-    <nav class="category-brand-filter" aria-label="<?php echo esc_attr(strtoupper($post_type)); ?> 브랜드 선택">
+    <nav class="category-brand-filter" aria-label="<?php echo esc_attr(strtoupper($post_type)); ?> 브랜드 선택" data-brand-filter>
         <div class="category-brand-filter__label">
             <span>브랜드 필터</span>
             <strong>브랜드 선택</strong>
         </div>
-        <div class="category-brand-filter__options">
+        <button class="category-brand-filter__toggle" type="button" aria-expanded="false" data-brand-filter-toggle>
+            <span><?php echo esc_html($active ?: '전체 브랜드'); ?></span>
+            <small>변경</small>
+            <i aria-hidden="true"></i>
+        </button>
+        <div class="category-brand-filter__options" data-brand-filter-options>
             <a class="<?php echo $active === '' ? 'is-active' : ''; ?>" href="<?php echo esc_url(ps_catalog_archive_url($post_type)); ?>"<?php echo $active === '' ? ' aria-current="page"' : ''; ?>>전체</a>
             <?php foreach ($brands as $brand) : ?>
                 <?php $selected = strcasecmp($active, $brand['name']) === 0; ?>
