@@ -3,7 +3,7 @@ Theme Name: SpecMatch
 Theme URI: https://specmatch.tech/
 Author: SpecMatch
 Description: 한국어 휴대폰 스펙, 비교, 구매 가이드를 위한 편집형 테마
-Version: 1.0.34
+Version: 1.0.35
 Requires at least: 6.6
 Requires PHP: 8.1
 Text Domain: phone-seoul
@@ -1553,6 +1553,7 @@ body::before {
   .catalog-sort__select { width: 100%; }
 
   .archive-catalog-layout { gap: 46px; }
+  .brand-side-widgets,
   .archive-side-widgets {
     display: grid;
     grid-auto-columns: minmax(278px, 86vw);
@@ -1565,7 +1566,10 @@ body::before {
     scroll-snap-type: x proximity;
     scrollbar-width: none;
   }
+  .brand-side-widgets::-webkit-scrollbar,
   .archive-side-widgets::-webkit-scrollbar { display: none; }
+  .brand-side-widgets .phone-side-widget,
+  .brand-side-widgets .sidebar-ad-slot,
   .archive-side-widgets .phone-side-widget,
   .archive-side-widgets .sidebar-ad-slot {
     grid-column: auto;
@@ -1573,12 +1577,15 @@ body::before {
     margin: 0;
     scroll-snap-align: start;
   }
+  .brand-side-widgets .phone-side-widget,
   .archive-side-widgets .phone-side-widget {
     padding: 0 14px 12px;
     border: 1px solid var(--line);
     border-top: 3px solid var(--ink);
     background: white;
   }
+  .brand-side-widgets .phone-side-widget--newest,
   .archive-side-widgets .phone-side-widget--newest { border-top-color: var(--blue); }
+  .brand-side-widgets .sidebar-ad-slot > div,
   .archive-side-widgets .sidebar-ad-slot > div { min-height: 220px; }
 }
