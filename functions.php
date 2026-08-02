@@ -785,8 +785,8 @@ function ps_phone_sidebar_widget(string $title, string $type, array $posts): voi
                             <img loading="lazy" decoding="async" width="44" height="54" src="<?php echo esc_url(pc_public_image_url($device)); ?>" alt="">
                         <?php endif; ?>
                         <span>
-                            <small><?php echo esc_html($device?->brand ?: '스마트폰'); ?></small>
-                            <strong><?php echo esc_html($post->post_title); ?></strong>
+                            <small><?php echo esc_html($device?->brand ? pc_apply_name_mappings((string) $device->brand) : '스마트폰'); ?></small>
+                            <strong><?php echo esc_html(pc_product_name((int) $post->ID)); ?></strong>
                         </span>
                     </a>
                 </li>
