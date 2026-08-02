@@ -3,7 +3,7 @@
     <?php ps_breadcrumbs(true); ?>
     <header class="archive-header archive-header--catalog">
         <p class="eyebrow">브랜드별 스마트폰</p>
-        <h1><?php single_term_title(); ?></h1>
+        <h1><?php echo esc_html(pc_apply_name_mappings(single_term_title('', false))); ?></h1>
     </header>
     <?php ps_category_brand_filter('phone'); ?>
     <div class="brand-catalog-layout">

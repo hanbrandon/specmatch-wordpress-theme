@@ -301,7 +301,7 @@ function ps_category_brand_filter(string $post_type): void
             <strong>브랜드 선택</strong>
         </div>
         <button class="category-brand-filter__toggle" type="button" aria-expanded="false" data-brand-filter-toggle>
-            <span><?php echo esc_html($active ?: '전체 브랜드'); ?></span>
+            <span><?php echo esc_html($active ? pc_apply_name_mappings($active) : '전체 브랜드'); ?></span>
             <small>변경</small>
             <i aria-hidden="true"></i>
         </button>
@@ -310,7 +310,7 @@ function ps_category_brand_filter(string $post_type): void
             <?php foreach ($brands as $brand) : ?>
                 <?php $selected = strcasecmp($active, $brand['name']) === 0; ?>
                 <a class="<?php echo $selected ? 'is-active' : ''; ?>" href="<?php echo esc_url($brand['url']); ?>"<?php echo $selected ? ' aria-current="page"' : ''; ?>>
-                    <?php echo esc_html($brand['name']); ?><small><?php echo esc_html(number_format_i18n($brand['count'])); ?></small>
+                    <?php echo esc_html($post_type === 'phone' ? pc_apply_name_mappings($brand['name']) : $brand['name']); ?><small><?php echo esc_html(number_format_i18n($brand['count'])); ?></small>
                 </a>
             <?php endforeach; ?>
         </div>
@@ -467,17 +467,19 @@ function ps_phone_card(?WP_Post $post = null, int $rank = 0): void
 {
     $post = $post ?: get_post();
     $device = function_exists('pc_get_device') ? pc_get_device((int) $post->ID) : null;
+    $display_name = pc_product_name((int) $post->ID);
+    $display_brand = $device?->brand ? pc_apply_name_mappings((string) $device->brand) : '스마트폰';
     $display_date = ps_catalog_display_date((int) $post->ID, (string) ($device?->announced ?? ''));
     ?>
     <article class="phone-card">
         <span class="rank"><?php echo esc_html(str_pad((string) $rank, 2, '0', STR_PAD_LEFT)); ?></span>
         <?php if (pc_public_image_url($device)) : ?>
-            <img loading="lazy" fetchpriority="low" decoding="async" width="300" height="220" src="<?php echo esc_url(pc_public_image_url($device)); ?>" alt="<?php echo esc_attr($post->post_title); ?>">
+            <img loading="lazy" fetchpriority="low" decoding="async" width="300" height="220" src="<?php echo esc_url(pc_public_image_url($device)); ?>" alt="<?php echo esc_attr($display_name); ?>">
         <?php endif; ?>
-        <p class="phone-card__brand"><?php echo esc_html($device?->brand ?: '스마트폰'); ?></p>
-        <h3><?php echo esc_html($post->post_title); ?></h3>
+        <p class="phone-card__brand"><?php echo esc_html($display_brand); ?></p>
+        <h3><?php echo esc_html($display_name); ?></h3>
         <p class="phone-card__date"><?php echo esc_html($display_date ?: '날짜 미상'); ?></p>
-        <a href="<?php echo esc_url(get_permalink($post)); ?>"<?php echo is_search() ? ' data-track-event="search_click" data-track-post="' . esc_attr((string) $post->ID) . '"' : ''; ?>><?php echo esc_html($post->post_title); ?> 보기</a>
+        <a href="<?php echo esc_url(get_permalink($post)); ?>"<?php echo is_search() ? ' data-track-event="search_click" data-track-post="' . esc_attr((string) $post->ID) . '"' : ''; ?>><?php echo esc_html($display_name); ?> 보기</a>
     </article>
     <?php
 }
