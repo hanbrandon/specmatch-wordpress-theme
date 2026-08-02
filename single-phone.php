@@ -38,7 +38,7 @@ $newest_sidebar = $device ? pc_sidebar_phone_posts('newest', 5, (int) $device->p
                 <section class="quick-specs shell">
                     <?php
                     $quick = [
-                        '출시' => $device->announced,
+                        '출시' => pc_public_text($device->announced),
                         '화면' => $device->display,
                         '칩셋' => $device->chipset,
                         '메모리' => $device->ram,
@@ -50,7 +50,7 @@ $newest_sidebar = $device ? pc_sidebar_phone_posts('newest', 5, (int) $device->p
                     foreach ($quick as $label => $value) :
                         if (!$value) continue;
                     ?>
-                        <div class="quick-spec"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></div>
+                        <div class="quick-spec"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html(pc_public_text((string) $value)); ?></strong></div>
                     <?php endforeach; ?>
                 </section>
 
@@ -121,7 +121,7 @@ $newest_sidebar = $device ? pc_sidebar_phone_posts('newest', 5, (int) $device->p
                                 <?php foreach ($rows as $row) : ?>
                                     <div class="spec-row">
                                         <?php ps_spec_label($section, $row->field_name, 'spec-help-' . (int) $row->id); ?>
-                                        <span><?php echo esc_html($row->field_value ?: '—'); ?></span>
+                                        <span><?php echo esc_html($row->field_value ? pc_public_text((string) $row->field_value) : '—'); ?></span>
                                     </div>
                                 <?php endforeach; ?>
                             <?php endforeach; ?>
