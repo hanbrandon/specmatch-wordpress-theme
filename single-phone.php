@@ -5,6 +5,7 @@ $spec_groups = $device ? pc_group_specs(pc_get_specs((int) $device->id)) : [];
 $offers = $device ? pc_get_offers((int) $device->id) : [];
 $insights = $device ? pc_device_insights($device) : [];
 $related = $device ? pc_related_devices($device) : [];
+$priority_comparisons = $device ? pc_priority_comparisons_for_device($device, 4) : [];
 $popular_sidebar = $device ? pc_sidebar_phone_posts('popular', 5, (int) $device->post_id) : [];
 $newest_sidebar = $device ? pc_sidebar_phone_posts('newest', 5, (int) $device->post_id) : [];
 ?>
@@ -16,6 +17,8 @@ $newest_sidebar = $device ? pc_sidebar_phone_posts('newest', 5, (int) $device->p
                 <div class="phone-title">
                     <p class="eyebrow"><?php echo esc_html($device?->brand ?: '스마트폰'); ?> / 전체 사양</p>
                     <h1><?php the_title(); ?></h1>
+                    <?php $original_name = pc_product_original_name((int) get_the_ID()); ?>
+                    <?php if ($original_name && $original_name !== get_the_title()) : ?><p class="product-original-name"><?php echo esc_html($original_name); ?></p><?php endif; ?>
                     <?php if (has_excerpt()) : ?><p class="lede"><?php echo esc_html(pc_public_text(get_the_excerpt())); ?></p><?php endif; ?>
                     <a class="button detail-compare-button" href="<?php echo esc_url(add_query_arg([
                         'phone' => get_post_field('post_name', get_the_ID()),
@@ -141,6 +144,23 @@ $newest_sidebar = $device ? pc_sidebar_phone_posts('newest', 5, (int) $device->p
                 </div>
 
                 <div class="shell"><?php ps_product_connections((int) get_the_ID()); ?></div>
+
+                <?php if ($priority_comparisons) : ?>
+                    <section class="priority-comparisons shell">
+                        <div class="section-heading">
+                            <div><p class="eyebrow">많이 비교하는 조합</p><h2><?php the_title(); ?> 비교</h2></div>
+                        </div>
+                        <div class="priority-comparisons__list">
+                            <?php foreach ($priority_comparisons as $comparison) : ?>
+                                <a href="<?php echo esc_url(pc_compare_url($device, $comparison)); ?>">
+                                    <span><?php echo esc_html(pc_product_name((int) $device->post_id)); ?></span>
+                                    <b>vs</b>
+                                    <strong><?php echo esc_html(pc_product_name((int) $comparison->post_id)); ?></strong>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endif; ?>
 
                 <?php if ($related) : ?>
                     <section class="related-phones shell">

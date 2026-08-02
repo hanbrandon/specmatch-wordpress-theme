@@ -145,9 +145,43 @@ function ps_filter_catalog_title_search(string $where, WP_Query $query): string
         return $where;
     }
     global $wpdb;
-    return $where . $wpdb->prepare(" AND {$wpdb->posts}.post_title LIKE %s", '%' . $wpdb->esc_like($keyword) . '%');
+    $like = '%' . $wpdb->esc_like($keyword) . '%';
+    return $where . $wpdb->prepare(
+        " AND ({$wpdb->posts}.post_title LIKE %s OR EXISTS (
+            SELECT 1 FROM {$wpdb->postmeta} pc_alias
+            WHERE pc_alias.post_id={$wpdb->posts}.ID
+              AND pc_alias.meta_key='_pc_search_aliases'
+              AND pc_alias.meta_value LIKE %s
+        ))",
+        $like,
+        $like
+    );
 }
 add_filter('posts_where', 'ps_filter_catalog_title_search', 10, 2);
+
+function ps_expand_global_catalog_search(string $search, WP_Query $query): string
+{
+    if (is_admin() || !$query->is_main_query() || !$query->is_search()) {
+        return $search;
+    }
+    $keyword = trim((string) $query->get('s'));
+    if ($keyword === '') {
+        return $search;
+    }
+    global $wpdb;
+    $like = '%' . $wpdb->esc_like($keyword) . '%';
+    return $wpdb->prepare(
+        " AND ({$wpdb->posts}.post_title LIKE %s OR EXISTS (
+            SELECT 1 FROM {$wpdb->postmeta} pc_alias
+            WHERE pc_alias.post_id={$wpdb->posts}.ID
+              AND pc_alias.meta_key='_pc_search_aliases'
+              AND pc_alias.meta_value LIKE %s
+        ))",
+        $like,
+        $like
+    );
+}
+add_filter('posts_search', 'ps_expand_global_catalog_search', 30, 2);
 
 function ps_apply_catalog_sorting(WP_Query $query): void
 {
