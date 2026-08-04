@@ -48,6 +48,15 @@ function ps_resource_hints(array $urls, string $relation_type): array
 }
 add_filter('wp_resource_hints', 'ps_resource_hints', 10, 2);
 
+function ps_allow_naver_yeti(string $output, bool $public): string
+{
+    if (stripos($output, 'User-agent: Yeti') === false) {
+        $output = rtrim($output) . "\n\nUser-agent: Yeti\nAllow: /\n";
+    }
+    return $output;
+}
+add_filter('robots_txt', 'ps_allow_naver_yeti', 10, 2);
+
 function ps_favicon(): void
 {
     if (!has_site_icon()) {
