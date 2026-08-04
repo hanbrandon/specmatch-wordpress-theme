@@ -3,6 +3,7 @@
 <head>
     <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="naver-site-verification" content="0ff82af8457334692dfeb9acf9c1a9b75e09157b">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9481966710896505" crossorigin="anonymous"></script>
     <?php wp_head(); ?>
 </head>
