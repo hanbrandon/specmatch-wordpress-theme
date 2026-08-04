@@ -57,6 +57,20 @@ function ps_allow_naver_yeti(string $output, bool $public): string
 }
 add_filter('robots_txt', 'ps_allow_naver_yeti', 10, 2);
 
+function ps_serve_naver_verification_file(): void
+{
+    $path = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    if ($path !== '/navere7f35168eb88592ccbdae3f4dbb225bc.html') {
+        return;
+    }
+    status_header(200);
+    nocache_headers();
+    header('Content-Type: text/html; charset=UTF-8');
+    echo 'naver-site-verification: navere7f35168eb88592ccbdae3f4dbb225bc.html';
+    exit;
+}
+add_action('template_redirect', 'ps_serve_naver_verification_file', 0);
+
 function ps_favicon(): void
 {
     if (!has_site_icon()) {
