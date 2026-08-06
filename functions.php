@@ -84,10 +84,18 @@ add_action('wp_head', 'ps_favicon', 2);
 function ps_catalog_search_scope(WP_Query $query): void
 {
     if (!is_admin() && $query->is_main_query() && $query->is_search()) {
-        $query->set('post_type', ['phone', 'laptop', 'cpu', 'gpu']);
-        $query->set('meta_key', '_catalog_release_date');
-        $query->set('orderby', ['meta_value' => 'DESC', 'title' => 'ASC']);
-        $query->set('order', 'DESC');
+        $keyword = trim((string) $query->get('s'));
+        $type = sanitize_key((string) ($_GET['search_type'] ?? 'all'));
+        if (!in_array($type, ['all', 'phone', 'laptop', 'cpu', 'gpu'], true)) {
+            $type = 'all';
+        }
+        $ids = function_exists('pc_search_post_ids') ? pc_search_post_ids($keyword, $type, 5000) : [];
+        $query->set('post_type', $type === 'all' ? ['phone', 'laptop', 'cpu', 'gpu'] : [$type]);
+        $query->set('post__in', $ids ?: [0]);
+        $query->set('orderby', 'post__in');
+        $query->set('posts_per_page', 24);
+        $query->set('ignore_sticky_posts', true);
+        $query->set('pc_ranked_catalog_search', true);
     }
 }
 add_action('pre_get_posts', 'ps_catalog_search_scope', 30);
@@ -117,6 +125,8 @@ add_filter('query_vars', static function (array $vars): array {
     $vars[] = 'catalog_q';
     $vars[] = 'catalog_year';
     $vars[] = 'min_score';
+    $vars[] = 'search_type';
+    $vars[] = 'pc_ranked_catalog_search';
     return $vars;
 });
 
@@ -187,22 +197,7 @@ function ps_expand_global_catalog_search(string $search, WP_Query $query): strin
     if (is_admin() || !$query->is_main_query() || !$query->is_search()) {
         return $search;
     }
-    $keyword = trim((string) $query->get('s'));
-    if ($keyword === '') {
-        return $search;
-    }
-    global $wpdb;
-    $like = '%' . $wpdb->esc_like($keyword) . '%';
-    return $wpdb->prepare(
-        " AND ({$wpdb->posts}.post_title LIKE %s OR EXISTS (
-            SELECT 1 FROM {$wpdb->postmeta} pc_alias
-            WHERE pc_alias.post_id={$wpdb->posts}.ID
-              AND pc_alias.meta_key='_pc_search_aliases'
-              AND pc_alias.meta_value LIKE %s
-        ))",
-        $like,
-        $like
-    );
+    return $query->get('pc_ranked_catalog_search') ? '' : $search;
 }
 add_filter('posts_search', 'ps_expand_global_catalog_search', 30, 2);
 

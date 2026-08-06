@@ -39,6 +39,85 @@
 })();
 
 (() => {
+  if (!window.PhoneSeoul?.searchUrl) return;
+
+  const typeLabels = { phone: "스마트폰", laptop: "노트북", cpu: "CPU", gpu: "GPU" };
+  document.querySelectorAll("[data-catalog-search]").forEach((form) => {
+    const input = form.querySelector("[data-search-input]");
+    const suggestions = form.querySelector("[data-search-suggestions]");
+    if (!input || !suggestions) return;
+    let timer = 0;
+    let controller;
+
+    const close = () => {
+      suggestions.hidden = true;
+      suggestions.replaceChildren();
+    };
+
+    input.addEventListener("input", () => {
+      window.clearTimeout(timer);
+      controller?.abort();
+      const query = input.value.trim();
+      if (query.length < 2) {
+        close();
+        return;
+      }
+      timer = window.setTimeout(async () => {
+        controller = new AbortController();
+        const selectedType = form.querySelector('[name="search_type"]:checked')?.value || "all";
+        try {
+          const response = await fetch(`${PhoneSeoul.searchUrl}?q=${encodeURIComponent(query)}&type=${encodeURIComponent(selectedType)}`, { signal: controller.signal });
+          if (!response.ok) throw new Error("search failed");
+          const items = await response.json();
+          suggestions.replaceChildren();
+          if (!items.length) {
+            const empty = document.createElement("p");
+            empty.textContent = "일치하는 제품이 없습니다.";
+            suggestions.appendChild(empty);
+          } else {
+            items.slice(0, 8).forEach((item) => {
+              const link = document.createElement("a");
+              link.href = item.url;
+              const meta = document.createElement("span");
+              meta.textContent = `${typeLabels[item.type] || "제품"} · ${item.brand || "브랜드 미상"}`;
+              const name = document.createElement("strong");
+              name.textContent = item.name;
+              link.append(meta, name);
+              suggestions.appendChild(link);
+            });
+          }
+          suggestions.hidden = false;
+        } catch (error) {
+          if (error.name !== "AbortError") close();
+        }
+      }, 180);
+    });
+
+    form.addEventListener("submit", (event) => {
+      if (!input.value.trim()) event.preventDefault();
+    });
+    form.querySelectorAll('[name="search_type"]').forEach((control) => {
+      control.addEventListener("change", () => form.requestSubmit());
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+    });
+    document.addEventListener("click", (event) => {
+      if (!form.contains(event.target)) close();
+    });
+  });
+
+  const toggle = document.querySelector("[data-header-search-toggle]");
+  const panel = document.querySelector("[data-header-search-panel]");
+  toggle?.addEventListener("click", () => {
+    const open = panel.hidden;
+    panel.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    if (open) panel.querySelector("[data-search-input]")?.focus();
+  });
+})();
+
+(() => {
   const builder = document.querySelector("[data-compare-builder]");
   if (!builder || !window.PhoneSeoul) return;
 

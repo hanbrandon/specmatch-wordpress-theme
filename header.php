@@ -58,10 +58,20 @@
         </nav>
         <div class="header-actions">
             <a class="header-compare" href="<?php echo esc_url(home_url('/compare/')); ?>">비교</a>
-            <a class="header-search" href="<?php echo esc_url(home_url('/?s=')); ?>" aria-label="통합 검색"><span>검색</span><b>⌕</b></a>
+            <button class="header-search" type="button" aria-label="통합 검색 열기" aria-expanded="false" data-header-search-toggle><span>검색</span><b>⌕</b></button>
             <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-menu" aria-label="메뉴 열기" data-menu-toggle>
                 <span></span><span></span><span></span>
             </button>
         </div>
     </div>
 </header>
+<div class="header-search-panel" data-header-search-panel hidden>
+    <form class="shell" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>" data-catalog-search>
+        <label for="header-search-query">통합 제품 검색</label>
+        <div>
+            <input id="header-search-query" type="search" name="s" placeholder="제품명, 칩셋, 그래픽카드 검색" autocomplete="off" data-search-input>
+            <button type="submit">검색</button>
+        </div>
+        <div class="search-suggestions" data-search-suggestions hidden></div>
+    </form>
+</div>

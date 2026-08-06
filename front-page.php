@@ -36,9 +36,10 @@ $total_count = array_sum(array_map(static fn(array $item): int => ps_catalog_cou
             <span>⌕</span>
             <p><strong>통합 검색</strong> 제품명, 칩셋, 그래픽카드를 검색하세요.</p>
         </div>
-        <form role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
-            <input type="search" name="s" placeholder="예: Galaxy S25, MacBook Pro, Ryzen 9, RTX 5090" aria-label="통합 제품 검색">
+        <form role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>" data-catalog-search>
+            <input type="search" name="s" placeholder="예: Galaxy S25, MacBook Pro, Ryzen 9, RTX 5090" aria-label="통합 제품 검색" autocomplete="off" data-search-input>
             <button type="submit">검색</button>
+            <div class="search-suggestions" data-search-suggestions hidden></div>
         </form>
     </section>
 
