@@ -3,7 +3,7 @@ Theme Name: SpecMatch
 Theme URI: https://specmatch.tech/
 Author: SpecMatch
 Description: 한국어 휴대폰 스펙, 비교, 구매 가이드를 위한 편집형 테마
-Version: 1.0.51
+Version: 1.0.53
 Requires at least: 6.6
 Requires PHP: 8.1
 Text Domain: phone-seoul
@@ -17,8 +17,9 @@ Text Domain: phone-seoul
   --blue: #2547f5;
   --muted: #6b6e67;
   --line: rgba(17, 19, 16, .18);
-  --display: "Archivo", "IBM Plex Sans KR", sans-serif;
-  --body: "IBM Plex Sans KR", sans-serif;
+  --display: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --body: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --shadow: 0 24px 70px rgba(18, 19, 16, .12);
 }
 
@@ -1203,6 +1204,19 @@ body::before {
 .ssd-related-comparisons strong { color: var(--blue); font: 700 10px var(--mono); }
 .ssd-related-comparisons a { color: var(--ink); font-weight: 700; word-break: keep-all; }
 .ssd-related-comparisons a:hover { color: var(--blue); }
+.ssd-status { display: inline-flex; width: fit-content; margin: 8px 0; padding: 5px 8px; border: 1px solid currentColor; font: 700 9px var(--mono); letter-spacing: .04em; }
+.ssd-status--active { color: #087a46; background: #effbf5; }
+.ssd-status--upcoming { color: var(--blue); background: #f1f5ff; }
+.ssd-status--eol { color: #a33a24; background: #fff3ef; }
+.ssd-status--legacy { color: #6b6254; background: #f3f0e9; }
+.ssd-status--unknown { color: var(--muted); background: #f6f6f6; }
+.ssd-landing-intro { display: grid; grid-template-columns: 220px 1fr; gap: 24px; margin-top: 22px; padding: 22px; border: 1px solid var(--line); border-left: 5px solid var(--blue); background: #f7f9ff; }
+.ssd-landing-intro strong { font: 800 17px var(--display); }
+.ssd-landing-intro p { margin: 0; color: var(--muted); line-height: 1.7; word-break: keep-all; }
+.ssd-compare-summary { display: grid; grid-template-columns: 150px 1fr; gap: 18px; margin: 22px 0 0; padding: 18px; color: var(--ink) !important; background: var(--acid); }
+.ssd-compare-summary strong { font: 800 13px var(--display); }
+.tech-card > .ssd-status { position: absolute; top: 46px; right: 14px; z-index: 1; }
+.catalog-filter:has(select[name="ssd_capacity"]) { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
 .tech-card > a { position: absolute; inset: 0; font-size: 0; }
 .tech-card__score { position: absolute; right: 22px; bottom: 22px; font: 600 26px var(--mono); }
 .tech-card__score small { color: var(--muted); font-size: 9px; }
@@ -1638,6 +1652,8 @@ body::before {
   .ssd-compare-overall > i { min-height: 36px; }
   .ssd-compare-category-grid > div { grid-template-columns: 84px 1fr 1fr; }
   .ssd-related-comparisons { grid-template-columns: 1fr; }
+  .ssd-landing-intro, .ssd-compare-summary { grid-template-columns: 1fr; gap: 8px; }
+  .catalog-filter:has(select[name="ssd_capacity"]) { grid-template-columns: 1fr; }
   .tech-data-note { grid-template-columns: 1fr; gap: 8px; }
   .tech-score-grid { grid-template-columns: repeat(2, 1fr); }
   .tech-config-row, .tech-spec-group { grid-template-columns: 1fr; gap: 0; }

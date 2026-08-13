@@ -15,6 +15,20 @@ if ($ssd_landing && function_exists('ps_ssd_landing_labels')) {
     if (isset($ssd_landing_labels[$ssd_landing])) {
         $archive_title = $ssd_landing_labels[$ssd_landing];
         $config[1] = $archive_title . ' 제품을 최신 출시일 순서로 살펴보고 핵심 사양을 비교합니다.';
+        $ssd_landing_copy = [
+            '1tb' => '운영체제와 주요 게임을 함께 설치하기 좋은 대표 용량입니다. 인터페이스와 NAND, 내구성을 함께 비교하세요.',
+            '2tb' => '대용량 게임과 작업 파일을 넉넉하게 보관하려는 사용자에게 적합한 용량입니다.',
+            '4tb' => '고용량 저장공간이 필요한 영상 작업과 대규모 게임 라이브러리를 위한 제품군입니다.',
+            'nvme-gen4' => 'PCIe 4.0 시스템에서 속도와 발열, 방열판 필요 여부를 함께 확인해야 합니다.',
+            'nvme-gen5' => '최고 수준의 순차 속도를 제공하지만 발열과 시스템 호환성을 우선 확인해야 합니다.',
+            'sata' => '기존 PC와 노트북 업그레이드에 널리 쓰이며 폼팩터와 커넥터 호환성이 중요합니다.',
+            'ps5-compatible' => 'PS5 요구 성능과 장착 규격을 충족한다고 표시된 제품입니다. 방열판 조건도 확인하세요.',
+            'tlc' => '일반적으로 지속 쓰기와 내구성의 균형을 중시할 때 선택하는 NAND 구성입니다.',
+            'qlc' => '고용량 구성에 유리하지만 장시간 쓰기 성능과 내구성 수치를 함께 비교해야 합니다.',
+            'dram' => '별도 DRAM을 사용하는 제품은 주소 매핑과 지속적인 작업 성능에서 유리할 수 있습니다.',
+            'hmb' => '시스템 메모리를 활용하는 HMB 방식은 DRAM 없는 NVMe SSD의 효율적인 대안입니다.',
+            'high-endurance' => '표기 내구성 1,000 TBW 이상 제품을 모았습니다. 용량당 TBW와 보증기간도 함께 확인하세요.',
+        ][$ssd_landing] ?? '';
     }
 }
 if ($active_brand) {
@@ -33,6 +47,7 @@ if ($active_brand) {
     </header>
     <?php ps_category_brand_filter($type); ?>
     <?php if ($type === 'ssd') : ?>
+        <?php if (!empty($ssd_landing_copy)) : ?><section class="ssd-landing-intro"><strong><?php echo esc_html($archive_title); ?> 선택 기준</strong><p><?php echo esc_html($ssd_landing_copy); ?></p></section><?php endif; ?>
         <nav class="ssd-landing-links" aria-label="SSD 용도와 규격별 보기">
             <span>빠른 탐색</span>
             <?php foreach (ps_ssd_landing_labels() as $slug => $landing_label) : ?>

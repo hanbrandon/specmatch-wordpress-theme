@@ -52,6 +52,7 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
             $ssd_insights = ps_ssd_insights($specs);
             $ssd_scorecard = ps_ssd_scorecard((int) get_the_ID());
             $ssd_faqs = ps_ssd_faqs((int) get_the_ID(), $ssd_scorecard);
+            $ssd_status = ps_ssd_product_status((int) get_the_ID());
         } else {
             foreach ($specs as $spec) {
                 $groups[(string) ($spec['section'] ?? 'Specifications')][] = $spec;
@@ -65,6 +66,7 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                 <?php if (has_excerpt()) : ?><div class="tech-detail__lede"><?php the_excerpt(); ?></div><?php endif; ?>
                 <?php ps_product_series_link((int) get_the_ID()); ?>
                 <?php if ($type === 'ssd') : ?>
+                    <span class="ssd-status ssd-status--<?php echo esc_attr($ssd_status['key']); ?>"><?php echo esc_html($ssd_status['label']); ?></span>
                     <a class="button detail-compare-button" href="<?php echo esc_url(add_query_arg([
                         'type' => 'ssd',
                         'phone' => get_post_field('post_name', get_the_ID()),
@@ -124,7 +126,7 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                         </div>
                         <div class="ssd-score-dial">
                             <strong><?php echo $ssd_scorecard['overall'] !== null ? esc_html((string) $ssd_scorecard['overall']) : '—'; ?></strong><small>/100</small>
-                            <span>데이터 충족도 <?php echo esc_html((string) $ssd_scorecard['coverage']); ?>%</span>
+                            <span>평가 기준 v<?php echo esc_html($ssd_scorecard['version']); ?></span>
                         </div>
                     </section>
                     <section class="ssd-scorecard" aria-label="SSD 자체 평가 점수">

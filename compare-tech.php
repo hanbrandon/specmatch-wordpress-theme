@@ -50,6 +50,21 @@ $type_labels = ['laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU', 'ssd' =
             $overall_b = $ssd_card_b['overall'];
             $winner = $overall_a !== null && $overall_b !== null
                 ? ($overall_a === $overall_b ? 'tie' : ($overall_a > $overall_b ? 'a' : 'b')) : 'unknown';
+            $a_leads = [];
+            $b_leads = [];
+            $ties = [];
+            foreach ($ssd_card_a['categories'] as $key => $category_a) {
+                $category_b = $ssd_card_b['categories'][$key];
+                if ($category_a['score'] === null || $category_b['score'] === null) continue;
+                if (abs($category_a['score'] - $category_b['score']) <= 2) $ties[] = $category_a['label'];
+                elseif ($category_a['score'] > $category_b['score']) $a_leads[] = $category_a['label'];
+                else $b_leads[] = $category_a['label'];
+            }
+            $verdict_sentences = [];
+            if ($a_leads) $verdict_sentences[] = $product_a->post_title . '은(는) ' . implode('·', $a_leads) . ' 항목에서 앞섭니다.';
+            if ($b_leads) $verdict_sentences[] = $product_b->post_title . '은(는) ' . implode('·', $b_leads) . ' 항목에서 앞섭니다.';
+            if ($ties) $verdict_sentences[] = implode('·', $ties) . ' 점수는 두 제품이 비슷합니다.';
+            if (!$verdict_sentences) $verdict_sentences[] = '공개된 데이터만으로는 뚜렷한 우세를 판단하기 어렵습니다.';
             ?>
             <section class="ssd-compare-verdict" aria-labelledby="ssd-compare-verdict-title">
                 <div><span>SPEC MATCH SCORE</span><h2 id="ssd-compare-verdict-title">스펙 기준 비교 결과</h2><p>가격을 제외하고 성능·내구성·기능·효율을 같은 규칙으로 평가했습니다.</p></div>
@@ -68,6 +83,7 @@ $type_labels = ['laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU', 'ssd' =
                         </div>
                     <?php endforeach; ?>
                 </div>
+                <p class="ssd-compare-summary"><strong>한눈에 보는 결론</strong><?php echo esc_html(implode(' ', $verdict_sentences)); ?></p>
                 <p class="score-note">누락된 항목은 계산에서 제외합니다. 점수 차이가 작다면 실제 체감 차이도 제한적일 수 있습니다.</p>
             </section>
         <?php endif; ?>

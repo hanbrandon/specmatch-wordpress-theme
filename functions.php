@@ -15,12 +15,6 @@ add_action('after_setup_theme', 'ps_setup');
 
 function ps_assets(): void
 {
-    wp_enqueue_style(
-        'phone-seoul-fonts',
-        'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap',
-        [],
-        null
-    );
     wp_enqueue_style('phone-seoul', get_stylesheet_uri(), [], wp_get_theme()->get('Version'));
     wp_enqueue_script(
         'phone-seoul',
@@ -40,10 +34,6 @@ add_action('wp_enqueue_scripts', 'ps_assets');
 
 function ps_resource_hints(array $urls, string $relation_type): array
 {
-    if ($relation_type === 'preconnect') {
-        $urls[] = ['href' => 'https://fonts.googleapis.com', 'crossorigin' => 'anonymous'];
-        $urls[] = ['href' => 'https://fonts.gstatic.com', 'crossorigin' => 'anonymous'];
-    }
     return $urls;
 }
 add_filter('wp_resource_hints', 'ps_resource_hints', 10, 2);
@@ -129,7 +119,7 @@ add_action('pre_get_posts', 'ps_dense_hardware_archives', 35);
 function ps_register_ssd_landing_routes(): void
 {
     add_rewrite_rule(
-        '^ssds/(1tb|2tb|4tb|nvme-gen4|nvme-gen5|sata|ps5-compatible)/?$',
+        '^ssds/(1tb|2tb|4tb|nvme-gen4|nvme-gen5|sata|ps5-compatible|tlc|qlc|dram|hmb|high-endurance)/?$',
         'index.php?post_type=ssd&ssd_landing=$matches[1]',
         'top'
     );
@@ -142,6 +132,8 @@ function ps_ssd_landing_labels(): array
         '1tb' => '1TB SSD', '2tb' => '2TB SSD', '4tb' => '4TB SSD',
         'nvme-gen4' => 'PCIe 4.0 NVMe SSD', 'nvme-gen5' => 'PCIe 5.0 NVMe SSD',
         'sata' => 'SATA SSD', 'ps5-compatible' => 'PS5 호환 SSD',
+        'tlc' => 'TLC SSD', 'qlc' => 'QLC SSD', 'dram' => 'DRAM 탑재 SSD',
+        'hmb' => 'HMB SSD', 'high-endurance' => '고내구성 SSD',
     ];
 }
 
@@ -157,13 +149,53 @@ function ps_filter_ssd_landing(WP_Query $query): void
         'nvme-gen5' => '"field":"Interface","value":"PCIe 5',
         'sata' => '"field":"Interface","value":"SATA',
         'ps5-compatible' => '"field":"PS5 Compatible","value":"Yes"',
+        'tlc' => '"field":"Type","value":"TLC"',
+        'qlc' => '"field":"Type","value":"QLC"',
+        'dram' => '"field":"Controller Features","value":"DRAM',
+        'hmb' => 'HMB',
+        'high-endurance' => '',
     ];
     if (!isset($needles[$landing])) return;
+    if ($landing === 'high-endurance') return;
     $meta_query = (array) $query->get('meta_query');
     $meta_query[] = ['key' => '_tech_specs', 'value' => $needles[$landing], 'compare' => 'LIKE'];
     $query->set('meta_query', $meta_query);
 }
 add_action('pre_get_posts', 'ps_filter_ssd_landing', 40);
+
+function ps_ssd_advanced_filter_where(string $where, WP_Query $query): string
+{
+    if (is_admin() || !$query->is_main_query() || !$query->is_post_type_archive('ssd')) return $where;
+    global $wpdb;
+    $filters = [
+        'ssd_capacity' => ['1tb' => '"field":"Capacity","value":"1 TB', '2tb' => '"field":"Capacity","value":"2 TB', '4tb' => '"field":"Capacity","value":"4 TB'],
+        'ssd_interface' => ['pcie3' => '"field":"Interface","value":"PCIe 3', 'pcie4' => '"field":"Interface","value":"PCIe 4', 'pcie5' => '"field":"Interface","value":"PCIe 5', 'sata' => '"field":"Interface","value":"SATA'],
+        'ssd_nand' => ['tlc' => '"field":"Type","value":"TLC"', 'qlc' => '"field":"Type","value":"QLC"'],
+        'ssd_cache' => ['dram' => '"field":"Controller Features","value":"DRAM', 'hmb' => 'HMB', 'none' => '"field":"Type","value":"None"'],
+        'ssd_ps5' => ['yes' => '"field":"PS5 Compatible","value":"Yes"', 'no' => '"field":"PS5 Compatible","value":"No"'],
+        'ssd_market' => ['consumer' => '"field":"Market","value":"Consumer"', 'enterprise' => '"field":"Market","value":"Enterprise"'],
+        'ssd_status' => ['active' => '"field":"Production","value":"Active"', 'eol' => '"field":"Production","value":"End-of-life"'],
+    ];
+    foreach ($filters as $query_var => $options) {
+        $selected = sanitize_key((string) get_query_var($query_var));
+        if ($selected && isset($options[$selected])) {
+            $where .= $wpdb->prepare(" AND EXISTS (SELECT 1 FROM {$wpdb->postmeta} ssd_filter WHERE ssd_filter.post_id={$wpdb->posts}.ID AND ssd_filter.meta_key='_tech_specs' AND ssd_filter.meta_value LIKE %s)", '%' . $wpdb->esc_like($options[$selected]) . '%');
+        }
+    }
+    foreach (['ssd_min_read' => 'Sequential Read', 'ssd_min_tbw' => 'Endurance'] as $query_var => $field) {
+        $minimum = absint(get_query_var($query_var));
+        if ($minimum) {
+            $pattern = '"field":"' . $field . '","value":"[0-9,]+';
+            $where .= $wpdb->prepare(" AND EXISTS (SELECT 1 FROM {$wpdb->postmeta} ssd_num WHERE ssd_num.post_id={$wpdb->posts}.ID AND ssd_num.meta_key='_tech_specs' AND CAST(REPLACE(REGEXP_REPLACE(REGEXP_SUBSTR(ssd_num.meta_value, %s), '^.*value.:.', ''), ',', '') AS UNSIGNED) >= %d)", $pattern, $minimum);
+        }
+    }
+    if (sanitize_key((string) get_query_var('ssd_landing')) === 'high-endurance') {
+        $pattern = '"field":"Endurance","value":"[0-9,]+';
+        $where .= $wpdb->prepare(" AND EXISTS (SELECT 1 FROM {$wpdb->postmeta} ssd_endurance WHERE ssd_endurance.post_id={$wpdb->posts}.ID AND ssd_endurance.meta_key='_tech_specs' AND CAST(REPLACE(REGEXP_REPLACE(REGEXP_SUBSTR(ssd_endurance.meta_value, %s), '^.*value.:.', ''), ',', '') AS UNSIGNED) >= 1000)", $pattern);
+    }
+    return $where;
+}
+add_filter('posts_where', 'ps_ssd_advanced_filter_where', 20, 2);
 
 add_filter('query_vars', static function (array $vars): array {
     $vars[] = 'tech_brand';
@@ -174,6 +206,7 @@ add_filter('query_vars', static function (array $vars): array {
     $vars[] = 'search_type';
     $vars[] = 'pc_ranked_catalog_search';
     $vars[] = 'ssd_landing';
+    foreach (['ssd_capacity', 'ssd_interface', 'ssd_nand', 'ssd_cache', 'ssd_ps5', 'ssd_market', 'ssd_min_read', 'ssd_min_tbw', 'ssd_status'] as $var) $vars[] = $var;
     return $vars;
 });
 
@@ -405,6 +438,7 @@ function ps_catalog_sorting_controls(string $post_type): void
         <?php if (get_query_var('catalog_q')) : ?><input type="hidden" name="catalog_q" value="<?php echo esc_attr(get_query_var('catalog_q')); ?>"><?php endif; ?>
         <?php if ($is_phone && get_query_var('catalog_year')) : ?><input type="hidden" name="catalog_year" value="<?php echo esc_attr(get_query_var('catalog_year')); ?>"><?php endif; ?>
         <?php if (!$is_phone && get_query_var('min_score')) : ?><input type="hidden" name="min_score" value="<?php echo esc_attr(get_query_var('min_score')); ?>"><?php endif; ?>
+        <?php if ($post_type === 'ssd') foreach (['ssd_capacity', 'ssd_interface', 'ssd_nand', 'ssd_cache', 'ssd_ps5', 'ssd_market', 'ssd_min_read', 'ssd_min_tbw', 'ssd_status'] as $ssd_var) if (get_query_var($ssd_var)) : ?><input type="hidden" name="<?php echo esc_attr($ssd_var); ?>" value="<?php echo esc_attr(get_query_var($ssd_var)); ?>"><?php endif; ?>
         <div class="catalog-sort__select">
             <select id="catalog-sort-<?php echo esc_attr($post_type); ?>" name="catalog_sort" onchange="this.form.submit()">
                 <?php foreach ($options as $value => $label) : ?>
@@ -450,20 +484,31 @@ function ps_catalog_filter_controls(string $post_type): void
                 </div>
             </label>
         <?php else : ?>
-            <label>
-                <span>최소 평가</span>
-                <div class="catalog-filter__select">
-                <select name="min_score">
-                    <option value="">전체 점수</option>
-                    <?php foreach ([50, 70, 85] as $score) : ?>
-                        <option value="<?php echo esc_attr($score); ?>" <?php selected((int) get_query_var('min_score'), $score); ?>><?php echo esc_html($score); ?>점 이상</option>
-                    <?php endforeach; ?>
-                </select>
-                </div>
-            </label>
+            <?php if ($post_type === 'ssd') : ?>
+                <?php
+                $ssd_filters = [
+                    'ssd_capacity' => ['용량', ['' => '전체 용량', '1tb' => '1TB', '2tb' => '2TB', '4tb' => '4TB']],
+                    'ssd_interface' => ['인터페이스', ['' => '전체 규격', 'pcie3' => 'PCIe 3.0', 'pcie4' => 'PCIe 4.0', 'pcie5' => 'PCIe 5.0', 'sata' => 'SATA']],
+                    'ssd_nand' => ['NAND', ['' => '전체 NAND', 'tlc' => 'TLC', 'qlc' => 'QLC']],
+                    'ssd_cache' => ['캐시', ['' => '전체 캐시', 'dram' => 'DRAM', 'hmb' => 'HMB', 'none' => 'DRAM 없음']],
+                    'ssd_market' => ['용도', ['' => '전체 시장', 'consumer' => '소비자용', 'enterprise' => '기업용']],
+                    'ssd_ps5' => ['PS5', ['' => '전체', 'yes' => '호환', 'no' => '비호환']],
+                    'ssd_status' => ['생산 상태', ['' => '전체 상태', 'active' => '생산 중', 'eol' => '단종']],
+                ];
+                ?>
+                <?php foreach ($ssd_filters as $filter_name => [$filter_label, $filter_options]) : ?>
+                    <label><span><?php echo esc_html($filter_label); ?></span><div class="catalog-filter__select"><select name="<?php echo esc_attr($filter_name); ?>">
+                        <?php foreach ($filter_options as $value => $option_label) : ?><option value="<?php echo esc_attr($value); ?>" <?php selected((string) get_query_var($filter_name), $value); ?>><?php echo esc_html($option_label); ?></option><?php endforeach; ?>
+                    </select></div></label>
+                <?php endforeach; ?>
+                <label><span>최소 읽기</span><div class="catalog-filter__select"><select name="ssd_min_read"><option value="">전체 속도</option><?php foreach ([500, 3000, 5000, 7000, 10000] as $speed) : ?><option value="<?php echo $speed; ?>" <?php selected((int) get_query_var('ssd_min_read'), $speed); ?>><?php echo number_format_i18n($speed); ?> MB/s 이상</option><?php endforeach; ?></select></div></label>
+                <label><span>최소 내구성</span><div class="catalog-filter__select"><select name="ssd_min_tbw"><option value="">전체 내구성</option><?php foreach ([300, 600, 1000, 3000] as $tbw) : ?><option value="<?php echo $tbw; ?>" <?php selected((int) get_query_var('ssd_min_tbw'), $tbw); ?>><?php echo number_format_i18n($tbw); ?> TBW 이상</option><?php endforeach; ?></select></div></label>
+            <?php else : ?>
+                <label><span>최소 평가</span><div class="catalog-filter__select"><select name="min_score"><option value="">전체 점수</option><?php foreach ([50, 70, 85] as $score) : ?><option value="<?php echo esc_attr($score); ?>" <?php selected((int) get_query_var('min_score'), $score); ?>><?php echo esc_html($score); ?>점 이상</option><?php endforeach; ?></select></div></label>
+            <?php endif; ?>
         <?php endif; ?>
         <button type="submit">필터 적용</button>
-        <?php if (get_query_var('catalog_q') || get_query_var('catalog_year') || get_query_var('min_score')) : ?>
+        <?php if (pc_catalog_filter_active()) : ?>
             <a href="<?php echo esc_url($action); ?>">초기화</a>
         <?php endif; ?>
     </form>
@@ -477,6 +522,7 @@ function ps_catalog_tools(string $post_type): void
         || get_query_var('catalog_year')
         || get_query_var('min_score')
         || get_query_var('catalog_sort')
+        || ($post_type === 'ssd' && pc_catalog_filter_active())
     );
     $panel_id = 'catalog-tools-' . sanitize_html_class($post_type);
     echo '<div class="catalog-tools" data-catalog-tools>';
@@ -562,6 +608,7 @@ function ps_tech_card(?WP_Post $post = null, int $rank = 0): void
             <span><?php echo esc_html(str_pad((string) $rank, 2, '0', STR_PAD_LEFT)); ?></span>
             <small><?php echo esc_html($labels[$type] ?? strtoupper((string) $type)); ?></small>
         </div>
+        <?php if ($type === 'ssd') : $ssd_status = ps_ssd_product_status((int) $post->ID); ?><span class="ssd-status ssd-status--<?php echo esc_attr($ssd_status['key']); ?>"><?php echo esc_html($ssd_status['label']); ?></span><?php endif; ?>
         <?php $image_url = function_exists('pc_public_tech_image_url') ? pc_public_tech_image_url((int) $post->ID) : null; ?>
         <?php if ($type === 'ssd') : ?>
             <?php ps_ssd_vector_mark('ssd-vector--card'); ?>
@@ -682,23 +729,37 @@ function ps_ssd_scorecard(int $post_id): array
     $random_write = $number('Random Write');
     $capacity = $number('Capacity');
     $endurance = $number('Endurance');
-    $power = $number('Power Draw');
     $interface = $first('Interface');
+    $market = $first('Market');
+    $power_text = $first('Power Draw');
+    $power = preg_match('/([\d.]+)\s*W\s*\(Avg\)/i', $power_text, $power_match)
+        ? (float) $power_match[1] : $number('Power Draw');
+    $speed_ceiling = stripos($interface, 'PCIe 5') !== false ? [14000, 14000]
+        : (stripos($interface, 'PCIe 4') !== false ? [7500, 7500]
+        : (stripos($interface, 'PCIe 3') !== false ? [3500, 3500]
+        : (stripos($interface, 'SATA') !== false ? [560, 540]
+        : (stripos($interface, 'SAS') !== false ? [2400, 2200] : [14000, 12000]))));
+    $controller_features = implode(' ', $values['Controller Features'] ?? []);
+    $dram_type = implode(' ', $values['Type'] ?? []);
     $features = [
         strcasecmp($first('TRIM'), 'Yes') === 0 ? 90 : null,
         strcasecmp($first('SMART'), 'Yes') === 0 ? 90 : null,
         strcasecmp($first('Power Loss Protection'), 'Yes') === 0 ? 100 : 45,
         $first('Encryption') && strcasecmp($first('Encryption'), 'No') !== 0 ? 90 : null,
+        stripos($controller_features, 'DRAM') !== false ? 100 : (stripos($controller_features, 'HMB') !== false ? 72 : (stripos($dram_type, 'None') !== false ? 45 : null)),
     ];
     $warranty = $number('Warranty');
     $tbw_per_tb = ($endurance !== null && $capacity) ? $endurance / max(0.12, $capacity >= 100 ? $capacity / 1000 : $capacity) : null;
+    $enterprise = stripos($market, 'Enterprise') !== false;
     $categories = [
-        'performance' => ['label' => '성능', 'score' => $average([$scale($read, 14000), $scale($write, 12000), $scale($random_read, 2000000), $scale($random_write, 1800000)])],
-        'endurance' => ['label' => '내구성', 'score' => $average([$scale($tbw_per_tb, 1200), $scale($warranty, 5)])],
+        'performance' => ['label' => '동급 성능', 'score' => $average([$scale($read, $speed_ceiling[0]), $scale($write, $speed_ceiling[1]), $scale($random_read, $enterprise ? 1000000 : 2000000), $scale($random_write, $enterprise ? 500000 : 1800000)])],
+        'endurance' => ['label' => '내구성', 'score' => $average([$scale($tbw_per_tb, $enterprise ? 6000 : 1200), $scale($warranty, 5)])],
         'features' => ['label' => '기능', 'score' => $average($features)],
         'efficiency' => ['label' => '효율', 'score' => $power === null ? null : (int) round(max(15, min(100, 110 - ($power * 5))))],
     ];
-    $weights = ['performance' => 0.45, 'endurance' => 0.25, 'features' => 0.20, 'efficiency' => 0.10];
+    $weights = $enterprise
+        ? ['performance' => 0.30, 'endurance' => 0.40, 'features' => 0.20, 'efficiency' => 0.10]
+        : ['performance' => 0.45, 'endurance' => 0.25, 'features' => 0.20, 'efficiency' => 0.10];
     $weighted = 0.0;
     $used_weight = 0.0;
     foreach ($categories as $key => $category) {
@@ -709,7 +770,19 @@ function ps_ssd_scorecard(int $post_id): array
     }
     $overall = $used_weight >= 0.45 ? (int) round($weighted / $used_weight) : null;
     $coverage = (int) round((count(array_filter([$read, $write, $random_read, $random_write, $endurance, $warranty, $power], static fn($v): bool => $v !== null)) / 7) * 100);
-    return compact('overall', 'categories', 'coverage', 'interface') + ['values' => $values];
+    return compact('overall', 'categories', 'coverage', 'interface', 'market') + ['values' => $values, 'version' => '2.0'];
+}
+
+function ps_ssd_product_status(int $post_id): array
+{
+    $values = ps_ssd_spec_values($post_id);
+    $production = strtolower((string) ($values['Production'][0] ?? ''));
+    $release = (string) get_post_meta($post_id, '_catalog_release_date', true);
+    if ($release && strtotime($release) > current_time('timestamp')) return ['key' => 'upcoming', 'label' => '출시 예정'];
+    if (str_contains($production, 'end-of-life') || str_contains($production, 'discontinued')) return ['key' => 'eol', 'label' => '단종'];
+    if (str_contains($production, 'active')) return ['key' => 'active', 'label' => '생산 중'];
+    if ($release && strtotime($release) < strtotime('-8 years', current_time('timestamp'))) return ['key' => 'legacy', 'label' => '레거시'];
+    return ['key' => 'unknown', 'label' => '상태 미상'];
 }
 
 function ps_ssd_faqs(int $post_id, array $scorecard): array
