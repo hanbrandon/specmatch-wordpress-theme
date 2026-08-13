@@ -5,9 +5,18 @@ $config = [
     'laptop' => ['노트북', '휴대성과 성능, 화면과 배터리를 같은 기준으로 비교합니다.', '노트북 데이터베이스'],
     'cpu' => ['CPU', '코어 구성부터 실제 벤치마크와 전력 효율까지 정리합니다.', '프로세서 데이터베이스'],
     'gpu' => ['GPU', '그래픽 성능, 메모리, 소비전력을 데이터로 읽습니다.', '그래픽카드 데이터베이스'],
+    'ssd' => ['SSD', '용량, 인터페이스, 컨트롤러, NAND와 성능을 같은 기준으로 비교합니다.', 'SSD 데이터베이스'],
 ][$type] ?? ['하드웨어', '성능과 사양을 비교합니다.', '하드웨어 데이터베이스'];
 $active_brand = sanitize_text_field((string) get_query_var('tech_brand'));
 $archive_title = $active_brand ? ucwords(str_replace('-', ' ', $active_brand)) . ' ' . $config[0] : $config[0];
+$ssd_landing = $type === 'ssd' ? sanitize_key((string) get_query_var('ssd_landing')) : '';
+if ($ssd_landing && function_exists('ps_ssd_landing_labels')) {
+    $ssd_landing_labels = ps_ssd_landing_labels();
+    if (isset($ssd_landing_labels[$ssd_landing])) {
+        $archive_title = $ssd_landing_labels[$ssd_landing];
+        $config[1] = $archive_title . ' 제품을 최신 출시일 순서로 살펴보고 핵심 사양을 비교합니다.';
+    }
+}
 if ($active_brand) {
     $config[1] = $archive_title . '의 최신 제품, 평가 점수와 전체 사양을 출시일순으로 정리합니다.';
 }
@@ -23,6 +32,19 @@ if ($active_brand) {
         </div>
     </header>
     <?php ps_category_brand_filter($type); ?>
+    <?php if ($type === 'ssd') : ?>
+        <nav class="ssd-landing-links" aria-label="SSD 용도와 규격별 보기">
+            <span>빠른 탐색</span>
+            <?php foreach (ps_ssd_landing_labels() as $slug => $landing_label) : ?>
+                <a class="<?php echo $ssd_landing === $slug ? 'is-active' : ''; ?>" href="<?php echo esc_url(home_url('/ssds/' . $slug . '/')); ?>"><?php echo esc_html($landing_label); ?></a>
+            <?php endforeach; ?>
+        </nav>
+        <section class="ssd-archive-guide" aria-label="SSD 선택 가이드">
+            <div><span>01</span><strong>인터페이스</strong><p>NVMe는 높은 전송 속도가 필요한 작업에, SATA는 기존 PC와 노트북 업그레이드에 주로 사용됩니다.</p></div>
+            <div><span>02</span><strong>NAND와 캐시</strong><p>TLC·QLC 같은 NAND 종류와 DRAM·HMB 구성은 지속 쓰기 성능과 사용 특성에 영향을 줍니다.</p></div>
+            <div><span>03</span><strong>속도와 내구성</strong><p>순차 속도뿐 아니라 랜덤 성능, TBW, 보증 기간을 함께 확인하면 용도에 맞는 제품을 고르기 쉽습니다.</p></div>
+        </section>
+    <?php endif; ?>
     <div class="archive-catalog-layout">
         <div class="archive-catalog-main">
             <?php ps_catalog_tools($type); ?>

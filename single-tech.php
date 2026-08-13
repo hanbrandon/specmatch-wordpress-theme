@@ -1,24 +1,80 @@
 <?php
 get_header();
 $type = get_post_type();
-$label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽카드'][$type] ?? '하드웨어';
+$label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽카드', 'ssd' => 'SSD'][$type] ?? '하드웨어';
 ?>
 <main class="site-main shell" id="main-content">
     <?php ps_breadcrumbs(true); ?>
     <?php while (have_posts()) : the_post(); ?>
-        <article class="tech-detail">
+        <?php
+        $decode_tech_meta = static function (string $key): array {
+            $raw = get_post_meta(get_the_ID(), $key, true);
+            if (is_array($raw)) {
+                return $raw;
+            }
+            $decoded = json_decode((string) $raw, true);
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+            return is_array($decoded) ? $decoded : [];
+        };
+        $image = function_exists('pc_public_tech_image_url') ? pc_public_tech_image_url(get_the_ID()) : null;
+        $scores = $decode_tech_meta('_tech_scores');
+        $configurations = $decode_tech_meta('_tech_configurations');
+        $specs = $decode_tech_meta('_tech_specs');
+        if ($type === 'ssd' && !$specs && preg_match_all('/<dt[^>]*>(.*?)<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/si', (string) get_the_content(), $ssd_content_rows, PREG_SET_ORDER)) {
+            foreach ($ssd_content_rows as $row_order => $ssd_content_row) {
+                $specs[] = [
+                    'section' => 'Specifications',
+                    'field' => trim(wp_strip_all_tags(html_entity_decode($ssd_content_row[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
+                    'value' => trim(wp_strip_all_tags(html_entity_decode($ssd_content_row[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
+                    'row_order' => $row_order,
+                ];
+            }
+        }
+        $groups = [];
+        $ssd_summary = [];
+
+        if ($type === 'ssd') {
+            $ssd_section = 'SSD Overview';
+            $ssd_type_count = 0;
+            foreach ($specs as $spec) {
+                $field = (string) ($spec['field'] ?? '');
+                if ($field === 'Form Factor') $ssd_section = 'SSD Physical';
+                elseif ($field === 'Manufacturer' && $ssd_section === 'SSD Physical') $ssd_section = 'SSD Controller';
+                elseif ($field === 'Manufacturer' && $ssd_section === 'SSD Controller') $ssd_section = 'SSD NAND';
+                elseif ($field === 'Type' && $ssd_section === 'SSD NAND' && ++$ssd_type_count > 1) $ssd_section = 'SSD DRAM';
+                elseif ($field === 'Sequential Read') $ssd_section = 'SSD Performance';
+                elseif ($field === 'TRIM') $ssd_section = 'SSD Features';
+                $groups[$ssd_section][] = $spec;
+                if (!isset($ssd_summary[$field])) $ssd_summary[$field] = (string) ($spec['value'] ?? '');
+            }
+            $ssd_insights = ps_ssd_insights($specs);
+            $ssd_scorecard = ps_ssd_scorecard((int) get_the_ID());
+            $ssd_faqs = ps_ssd_faqs((int) get_the_ID(), $ssd_scorecard);
+        } else {
+            foreach ($specs as $spec) {
+                $groups[(string) ($spec['section'] ?? 'Specifications')][] = $spec;
+            }
+        }
+        ?>
+        <article class="tech-detail tech-detail--<?php echo esc_attr($type); ?>">
             <header>
                 <p><?php echo esc_html($label); ?> / 제품 정보</p>
                 <h1><?php the_title(); ?></h1>
                 <?php if (has_excerpt()) : ?><div class="tech-detail__lede"><?php the_excerpt(); ?></div><?php endif; ?>
                 <?php ps_product_series_link((int) get_the_ID()); ?>
+                <?php if ($type === 'ssd') : ?>
+                    <a class="button detail-compare-button" href="<?php echo esc_url(add_query_arg([
+                        'type' => 'ssd',
+                        'phone' => get_post_field('post_name', get_the_ID()),
+                        'name' => get_the_title(),
+                        'post_id' => get_the_ID(),
+                    ], home_url('/compare/'))); ?>">이 SSD와 비교하기 →</a>
+                <?php endif; ?>
             </header>
             <div class="tech-detail__body">
                 <?php
-                $image = function_exists('pc_public_tech_image_url') ? pc_public_tech_image_url(get_the_ID()) : null;
-                $scores = json_decode((string) get_post_meta(get_the_ID(), '_tech_scores', true), true) ?: [];
-                $configurations = json_decode((string) get_post_meta(get_the_ID(), '_tech_configurations', true), true) ?: [];
-                $specs = json_decode((string) get_post_meta(get_the_ID(), '_tech_specs', true), true) ?: [];
                 $section_notes = [
                     'Games' => '각 숫자는 순서대로 1080p 높음, 1080p 울트라, 1440p 울트라, 4K 울트라의 평균 FPS입니다. FPS가 높을수록 화면 움직임이 더 부드럽습니다.',
                     '3D Mark' => '그래픽 성능을 수치화한 벤치마크 원점수입니다. 높을수록 좋지만, 서로 다른 시험끼리가 아니라 같은 시험의 다른 GPU와 비교하세요.',
@@ -31,14 +87,80 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                 $game_labels = ['1080p 높음', '1080p 울트라', '1440p 울트라', '4K 울트라'];
                 $game_summary_fields = ['1080p High', '1080p Ultra', '1440p Ultra', '4K Ultra'];
                 ?>
-                <?php if ($image) : ?>
+                <?php if ($type === 'ssd') : ?>
+                    <section class="ssd-overview" aria-label="SSD 핵심 사양">
+                        <div class="ssd-overview__visual">
+                            <span>SSD / QUICK VIEW</span>
+                            <?php ps_ssd_vector_mark('ssd-vector--hero'); ?>
+                        </div>
+                        <div class="ssd-overview__content">
+                            <p>핵심 사양</p>
+                            <h2>구매 전에 먼저 볼 정보</h2>
+                            <dl>
+                                <?php foreach (['Capacity' => '용량', 'Form Factor' => '폼팩터', 'Interface' => '인터페이스', 'Sequential Read' => '순차 읽기', 'Sequential Write' => '순차 쓰기', 'Endurance' => '쓰기 내구성'] as $summary_key => $summary_label) : ?>
+                                    <?php if (!empty($ssd_summary[$summary_key])) : ?><div><dt><?php echo esc_html($summary_label); ?></dt><dd><?php echo esc_html(pc_translate_tech_value($ssd_summary[$summary_key])); ?></dd></div><?php endif; ?>
+                                <?php endforeach; ?>
+                            </dl>
+                        </div>
+                    </section>
+                <?php elseif ($image) : ?>
                     <figure class="tech-product-image"><img src="<?php echo esc_url($image); ?>" alt="<?php the_title_attribute(); ?>" width="520" height="360" loading="eager" decoding="async" referrerpolicy="no-referrer"></figure>
                 <?php endif; ?>
                 <aside class="tech-data-note" aria-label="데이터 해석 안내">
                     <strong>데이터 읽는 법</strong>
-                    <p>평가 점수는 수집된 사양과 벤치마크를 제품군 안에서 비교하기 위한 참고 지표입니다. 실제 성능은 사용 환경, 전력 설정과 소프트웨어 버전에 따라 달라질 수 있습니다.</p>
+                    <p><?php echo $type === 'ssd' ? '표기 속도와 내구성은 제조사 사양을 기준으로 하며, 실제 성능은 용량·시스템 구성·작업 유형에 따라 달라질 수 있습니다.' : '평가 점수는 수집된 사양과 벤치마크를 제품군 안에서 비교하기 위한 참고 지표입니다. 실제 성능은 사용 환경, 전력 설정과 소프트웨어 버전에 따라 달라질 수 있습니다.'; ?></p>
                     <span>마지막 데이터 갱신: <?php echo esc_html(get_the_modified_date('Y년 n월 j일')); ?></span>
                 </aside>
+                <?php if ($type === 'ssd') : ?>
+                    <section class="ssd-answer" aria-labelledby="ssd-answer-title">
+                        <div>
+                            <span>SPEC MATCH VERDICT</span>
+                            <h2 id="ssd-answer-title"><?php the_title(); ?> 핵심 결론</h2>
+                            <p><?php echo esc_html(sprintf(
+                                '%s 인터페이스 기반 제품이며, 공개된 사양을 기준으로 한 자체 평가는 %s입니다. 가격은 평가에 포함하지 않았고 실제 성능은 시스템 구성에 따라 달라질 수 있습니다.',
+                                $ssd_scorecard['interface'] ?: '인터페이스 정보 미상',
+                                $ssd_scorecard['overall'] !== null ? $ssd_scorecard['overall'] . '점' : '데이터 부족으로 산정 보류'
+                            )); ?></p>
+                        </div>
+                        <div class="ssd-score-dial">
+                            <strong><?php echo $ssd_scorecard['overall'] !== null ? esc_html((string) $ssd_scorecard['overall']) : '—'; ?></strong><small>/100</small>
+                            <span>데이터 충족도 <?php echo esc_html((string) $ssd_scorecard['coverage']); ?>%</span>
+                        </div>
+                    </section>
+                    <section class="ssd-scorecard" aria-label="SSD 자체 평가 점수">
+                        <?php foreach ($ssd_scorecard['categories'] as $category) : ?>
+                            <div>
+                                <span><?php echo esc_html($category['label']); ?></span>
+                                <strong><?php echo $category['score'] !== null ? esc_html((string) $category['score']) : '—'; ?></strong>
+                                <?php if ($category['score'] !== null) : ?><progress max="100" value="<?php echo esc_attr((string) $category['score']); ?>"></progress><?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </section>
+                    <section class="ssd-analysis" aria-labelledby="ssd-analysis-title">
+                        <header><span>구매 판단 가이드</span><h2 id="ssd-analysis-title">이 SSD를 어떻게 봐야 할까요?</h2></header>
+                        <div class="ssd-analysis__grid">
+                            <section><strong>장점</strong><ul><?php foreach ($ssd_insights['advantages'] as $text) : ?><li><?php echo esc_html($text); ?></li><?php endforeach; ?></ul></section>
+                            <section><strong>확인할 점</strong><ul><?php foreach ($ssd_insights['cautions'] as $text) : ?><li><?php echo esc_html($text); ?></li><?php endforeach; ?></ul></section>
+                            <section><strong>추천 용도</strong><ul><?php foreach ($ssd_insights['uses'] as $text) : ?><li><?php echo esc_html($text); ?></li><?php endforeach; ?></ul></section>
+                        </div>
+                        <div class="ssd-analysis__terms">
+                            <p><strong>인터페이스</strong><span><?php echo esc_html($ssd_insights['interface']); ?> — SSD와 시스템이 데이터를 주고받는 연결 규격입니다.</span></p>
+                            <p><strong>NAND 정보</strong><span><?php echo esc_html($ssd_insights['nand']); ?> — 데이터를 실제로 저장하는 플래시 메모리 구성입니다.</span></p>
+                        </div>
+                        <p class="ssd-analysis__method">표시된 판단은 공개된 제품 사양을 규칙에 따라 정리한 참고 정보입니다. <a href="<?php echo esc_url(home_url('/methodology/')); ?>">데이터·평가 방법 보기</a></p>
+                    </section>
+                    <section class="ssd-faq" aria-labelledby="ssd-faq-title">
+                        <header><span>자주 묻는 질문</span><h2 id="ssd-faq-title">이 제품에 대해 궁금한 점</h2></header>
+                        <?php foreach ($ssd_faqs as $faq) : ?>
+                            <details><summary><?php echo esc_html($faq['question']); ?></summary><p><?php echo esc_html($faq['answer']); ?></p></details>
+                        <?php endforeach; ?>
+                    </section>
+                    <aside class="ssd-source-note">
+                        <strong>데이터 신뢰 정보</strong>
+                        <p>공개된 제품 사양을 한국어로 정리했으며 자체 점수는 가격을 제외한 규칙 기반 참고 지표입니다. 잘못된 정보는 <a href="mailto:<?php echo esc_attr(antispambot((string) get_option('admin_email'))); ?>?subject=<?php echo rawurlencode('[스펙 오류 신고] ' . get_the_title()); ?>">오류 신고</a>로 알려주세요.</p>
+                        <span>최종 확인: <?php echo esc_html(get_the_modified_date('Y년 n월 j일')); ?></span>
+                    </aside>
+                <?php endif; ?>
                 <?php if ($scores) : ?>
                     <section class="tech-data-section">
                         <header><span>성능</span><h2>평가 및 벤치마크</h2></header>
@@ -72,12 +194,6 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                         <?php endforeach; ?>
                     </section>
                 <?php endif; ?>
-                <?php
-                $groups = [];
-                foreach ($specs as $spec) {
-                    $groups[(string) ($spec['section'] ?? 'Specifications')][] = $spec;
-                }
-                ?>
                 <?php if ($groups) : ?>
                     <section class="tech-data-section">
                         <header><span>상세 정보</span><h2>전체 사양</h2></header>
@@ -179,7 +295,7 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                                         <?php foreach ($rows as $row) : ?>
                                             <div>
                                                 <dt><?php echo esc_html(pc_translate_tech_key($row['field'] ?? '')); ?></dt>
-                                                <dd><?php echo esc_html($row['value'] ?? ''); ?></dd>
+                                                <dd><?php echo esc_html($type === 'ssd' && function_exists('pc_translate_tech_value') ? pc_translate_tech_value($row['value'] ?? '') : ($row['value'] ?? '')); ?></dd>
                                             </div>
                                         <?php endforeach; ?>
                                     </dl>
@@ -207,6 +323,14 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                             <?php ps_tech_card($related_product, $index + 1); ?>
                         <?php endforeach; ?>
                     </div>
+                    <?php if ($type === 'ssd') : ?>
+                        <nav class="ssd-related-comparisons" aria-label="추천 SSD 비교">
+                            <strong>추천 비교</strong>
+                            <?php foreach ($related_products as $related_product) : ?>
+                                <a href="<?php echo esc_url(pc_compare_tech_url(get_post(), $related_product)); ?>"><?php the_title(); ?> vs <?php echo esc_html($related_product->post_title); ?></a>
+                            <?php endforeach; ?>
+                        </nav>
+                    <?php endif; ?>
                 </section>
             <?php endif; ?>
             <?php ps_recent_products_section((int) get_the_ID()); ?>

@@ -50,12 +50,18 @@ add_filter('wp_resource_hints', 'ps_resource_hints', 10, 2);
 
 function ps_allow_naver_yeti(string $output, bool $public): string
 {
+    $sitemap = 'Sitemap: ' . home_url('/sitemap_index.xml');
+    if (preg_match('/^Sitemap:\s*\S+/mi', $output)) {
+        $output = (string) preg_replace('/^Sitemap:\s*\S+/mi', $sitemap, $output);
+    } else {
+        $output = rtrim($output) . "\n\n" . $sitemap . "\n";
+    }
     if (stripos($output, 'User-agent: Yeti') === false) {
         $output = rtrim($output) . "\n\nUser-agent: Yeti\nAllow: /\n";
     }
     return $output;
 }
-add_filter('robots_txt', 'ps_allow_naver_yeti', 10, 2);
+add_filter('robots_txt', 'ps_allow_naver_yeti', 9999, 2);
 
 function ps_serve_naver_verification_file(): void
 {
@@ -86,11 +92,11 @@ function ps_catalog_search_scope(WP_Query $query): void
     if (!is_admin() && $query->is_main_query() && $query->is_search()) {
         $keyword = trim((string) $query->get('s'));
         $type = sanitize_key((string) ($_GET['search_type'] ?? 'all'));
-        if (!in_array($type, ['all', 'phone', 'laptop', 'cpu', 'gpu'], true)) {
+        if (!in_array($type, ['all', 'phone', 'laptop', 'cpu', 'gpu', 'ssd'], true)) {
             $type = 'all';
         }
         $ids = function_exists('pc_search_post_ids') ? pc_search_post_ids($keyword, $type, 5000) : [];
-        $query->set('post_type', $type === 'all' ? ['phone', 'laptop', 'cpu', 'gpu'] : [$type]);
+        $query->set('post_type', $type === 'all' ? ['phone', 'laptop', 'cpu', 'gpu', 'ssd'] : [$type]);
         $query->set('post__in', $ids ?: [0]);
         $query->set('orderby', 'post__in');
         $query->set('posts_per_page', 24);
@@ -102,10 +108,10 @@ add_action('pre_get_posts', 'ps_catalog_search_scope', 30);
 
 function ps_dense_hardware_archives(WP_Query $query): void
 {
-    if (is_admin() || !$query->is_main_query() || !$query->is_post_type_archive(['laptop', 'cpu', 'gpu'])) {
+    if (is_admin() || !$query->is_main_query() || !$query->is_post_type_archive(['laptop', 'cpu', 'gpu', 'ssd'])) {
         return;
     }
-    $query->set('posts_per_page', 80);
+    $query->set('posts_per_page', $query->is_post_type_archive('ssd') ? 24 : 80);
     $query->set('meta_key', '_catalog_release_date');
     $query->set('orderby', ['meta_value' => 'DESC', 'title' => 'ASC']);
     $query->set('order', 'DESC');
@@ -119,6 +125,46 @@ function ps_dense_hardware_archives(WP_Query $query): void
     }
 }
 add_action('pre_get_posts', 'ps_dense_hardware_archives', 35);
+
+function ps_register_ssd_landing_routes(): void
+{
+    add_rewrite_rule(
+        '^ssds/(1tb|2tb|4tb|nvme-gen4|nvme-gen5|sata|ps5-compatible)/?$',
+        'index.php?post_type=ssd&ssd_landing=$matches[1]',
+        'top'
+    );
+}
+add_action('init', 'ps_register_ssd_landing_routes', 5);
+
+function ps_ssd_landing_labels(): array
+{
+    return [
+        '1tb' => '1TB SSD', '2tb' => '2TB SSD', '4tb' => '4TB SSD',
+        'nvme-gen4' => 'PCIe 4.0 NVMe SSD', 'nvme-gen5' => 'PCIe 5.0 NVMe SSD',
+        'sata' => 'SATA SSD', 'ps5-compatible' => 'PS5 호환 SSD',
+    ];
+}
+
+function ps_filter_ssd_landing(WP_Query $query): void
+{
+    if (is_admin() || !$query->is_main_query() || !$query->is_post_type_archive('ssd')) return;
+    $landing = sanitize_key((string) get_query_var('ssd_landing'));
+    $needles = [
+        '1tb' => '"field":"Capacity","value":"1 TB',
+        '2tb' => '"field":"Capacity","value":"2 TB',
+        '4tb' => '"field":"Capacity","value":"4 TB',
+        'nvme-gen4' => '"field":"Interface","value":"PCIe 4',
+        'nvme-gen5' => '"field":"Interface","value":"PCIe 5',
+        'sata' => '"field":"Interface","value":"SATA',
+        'ps5-compatible' => '"field":"PS5 Compatible","value":"Yes"',
+    ];
+    if (!isset($needles[$landing])) return;
+    $meta_query = (array) $query->get('meta_query');
+    $meta_query[] = ['key' => '_tech_specs', 'value' => $needles[$landing], 'compare' => 'LIKE'];
+    $query->set('meta_query', $meta_query);
+}
+add_action('pre_get_posts', 'ps_filter_ssd_landing', 40);
+
 add_filter('query_vars', static function (array $vars): array {
     $vars[] = 'tech_brand';
     $vars[] = 'catalog_sort';
@@ -127,6 +173,7 @@ add_filter('query_vars', static function (array $vars): array {
     $vars[] = 'min_score';
     $vars[] = 'search_type';
     $vars[] = 'pc_ranked_catalog_search';
+    $vars[] = 'ssd_landing';
     return $vars;
 });
 
@@ -136,7 +183,7 @@ function ps_apply_catalog_filters(WP_Query $query): void
         return;
     }
     $is_phone = $query->is_post_type_archive('phone') || $query->is_tax('phone_brand');
-    $is_hardware = $query->is_post_type_archive(['laptop', 'cpu', 'gpu']);
+    $is_hardware = $query->is_post_type_archive(['laptop', 'cpu', 'gpu', 'ssd']);
     if (!$is_phone && !$is_hardware) {
         return;
     }
@@ -209,7 +256,7 @@ function ps_apply_catalog_sorting(WP_Query $query): void
     $sort = sanitize_key((string) get_query_var('catalog_sort'));
     $post_type = (string) $query->get('post_type');
     $is_phone = $query->is_post_type_archive('phone') || $query->is_tax('phone_brand');
-    $is_hardware = $query->is_post_type_archive(['laptop', 'cpu', 'gpu']);
+    $is_hardware = $query->is_post_type_archive(['laptop', 'cpu', 'gpu', 'ssd']);
     if (!$is_phone && !$is_hardware) {
         return;
     }
@@ -506,7 +553,7 @@ function ps_tech_card(?WP_Post $post = null, int $rank = 0): void
 {
     $post = $post ?: get_post();
     $type = get_post_type($post);
-    $labels = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽카드'];
+    $labels = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽카드', 'ssd' => 'SSD'];
     $score = get_post_meta($post->ID, '_tech_score', true);
     $display_date = ps_catalog_display_date((int) $post->ID, (string) get_post_meta($post->ID, '_tech_launched', true));
     ?>
@@ -516,7 +563,9 @@ function ps_tech_card(?WP_Post $post = null, int $rank = 0): void
             <small><?php echo esc_html($labels[$type] ?? strtoupper((string) $type)); ?></small>
         </div>
         <?php $image_url = function_exists('pc_public_tech_image_url') ? pc_public_tech_image_url((int) $post->ID) : null; ?>
-        <?php if ($image_url) : ?>
+        <?php if ($type === 'ssd') : ?>
+            <?php ps_ssd_vector_mark('ssd-vector--card'); ?>
+        <?php elseif ($image_url) : ?>
             <div class="tech-card__image"><img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($post->post_title); ?>" width="300" height="150" loading="lazy" fetchpriority="low" decoding="async" referrerpolicy="no-referrer"></div>
         <?php elseif (has_post_thumbnail($post)) : ?>
             <?php echo get_the_post_thumbnail($post, 'medium', ['loading' => 'lazy', 'fetchpriority' => 'low', 'decoding' => 'async']); ?>
@@ -534,10 +583,188 @@ function ps_tech_card(?WP_Post $post = null, int $rank = 0): void
     <?php
 }
 
+function ps_ssd_vector_mark(string $class = ''): void
+{
+    ?>
+    <div class="ssd-vector <?php echo esc_attr($class); ?>" role="img" aria-label="SSD 제품 이미지 대체 그래픽">
+        <span>SSD</span>
+        <small>SOLID STATE DRIVE</small>
+        <i aria-hidden="true"></i>
+    </div>
+    <?php
+}
+
+function ps_ssd_insights(array $specs): array
+{
+    $values = [];
+    foreach ($specs as $spec) {
+        $field = trim((string) ($spec['field'] ?? ''));
+        if ($field !== '' && !isset($values[$field])) $values[$field] = trim((string) ($spec['value'] ?? ''));
+    }
+    $number = static function (string $field) use ($values): float {
+        return isset($values[$field]) && preg_match('/[\d,.]+/', $values[$field], $match)
+            ? (float) str_replace(',', '', $match[0]) : 0;
+    };
+    $read = $number('Sequential Read');
+    $write = $number('Sequential Write');
+    $interface = $values['Interface'] ?? '정보 없음';
+    $nand = $values['Technology'] ?? ($values['Type'] ?? '정보 없음');
+    $advantages = [];
+    $cautions = [];
+    $uses = [];
+
+    if ($read >= 5000) $advantages[] = '순차 읽기 ' . $values['Sequential Read'] . '로 대용량 파일과 고사양 작업에 유리합니다.';
+    elseif ($read >= 3000) $advantages[] = '순차 읽기 ' . $values['Sequential Read'] . '로 NVMe 기반 게임과 일반 작업에 충분한 성능입니다.';
+    elseif ($read >= 500) $advantages[] = 'SATA 인터페이스에서 기대할 수 있는 상위권 순차 읽기 속도를 제공합니다.';
+    if ($write > 0) $advantages[] = '순차 쓰기 ' . $values['Sequential Write'] . ' 사양으로 파일 복사 성능을 가늠할 수 있습니다.';
+    if (!empty($values['Endurance']) && strcasecmp($values['Endurance'], 'Unknown') !== 0) $advantages[] = '쓰기 내구성은 ' . $values['Endurance'] . '로 명시되어 있습니다.';
+    if (($values['TRIM'] ?? '') === 'Yes') $advantages[] = 'TRIM을 지원해 장기간 사용 시 저장장치 관리에 유리합니다.';
+
+    if (($values['Warranty'] ?? '') === 'Unknown') $cautions[] = '보증 기간 정보가 없어 구매처 또는 제조사 확인이 필요합니다.';
+    if (($values['Random Read'] ?? '') === 'Unknown' || ($values['Random Write'] ?? '') === 'Unknown') $cautions[] = '랜덤 읽기·쓰기 정보가 없어 체감 반응성을 수치만으로 판단하기 어렵습니다.';
+    if (($values['Power Loss Protection'] ?? '') === 'No') $cautions[] = '전원 손실 보호 기능을 지원하지 않는 것으로 표시됩니다.';
+    if (($values['Type'] ?? '') === 'None') $cautions[] = '별도 DRAM 캐시가 없는 구성으로 확인됩니다.';
+
+    if (stripos($interface, 'PCIe') !== false || stripos($interface, 'NVMe') !== false) $uses[] = '게임용 PC와 빠른 부팅·앱 실행이 필요한 시스템';
+    if (stripos($interface, 'SATA') !== false) $uses[] = '기존 SATA 노트북·데스크톱의 저장장치 교체';
+    if ($read >= 5000 && $write >= 4000) $uses[] = '대용량 영상·사진 편집과 작업 파일 이동';
+    if (($values['PS5 Compatible'] ?? '') === 'Yes') $uses[] = 'PlayStation 5 저장공간 확장';
+    if (!$uses) $uses[] = '일반 문서 작업과 운영체제·프로그램 저장용';
+
+    return [
+        'advantages' => array_slice(array_values(array_unique($advantages ?: ['용량과 인터페이스, 성능 정보를 한 페이지에서 확인할 수 있습니다.'])), 0, 3),
+        'cautions' => array_slice(array_values(array_unique($cautions ?: ['실제 성능은 시스템 구성과 작업 환경에 따라 달라질 수 있습니다.'])), 0, 3),
+        'uses' => array_slice(array_values(array_unique($uses)), 0, 3),
+        'interface' => $interface,
+        'nand' => $nand,
+    ];
+}
+
+function ps_ssd_specs(int $post_id): array
+{
+    $raw = get_post_meta($post_id, '_tech_specs', true);
+    if (is_array($raw)) return $raw;
+    $decoded = json_decode((string) $raw, true);
+    if (is_string($decoded)) $decoded = json_decode($decoded, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function ps_ssd_spec_values(int $post_id): array
+{
+    $values = [];
+    foreach (ps_ssd_specs($post_id) as $spec) {
+        $field = trim((string) ($spec['field'] ?? ''));
+        $value = trim((string) ($spec['value'] ?? ''));
+        if ($field !== '') $values[$field][] = $value;
+    }
+    return $values;
+}
+
+function ps_ssd_scorecard(int $post_id): array
+{
+    $values = ps_ssd_spec_values($post_id);
+    $first = static fn(string $key): string => (string) ($values[$key][0] ?? '');
+    $number = static function (string $key) use ($first): ?float {
+        $value = $first($key);
+        return $value !== '' && preg_match('/[\d,.]+/', $value, $match)
+            ? (float) str_replace(',', '', $match[0]) : null;
+    };
+    $scale = static fn(?float $value, float $maximum): ?int => $value === null
+        ? null : (int) round(max(0, min(100, ($value / $maximum) * 100)));
+    $average = static function (array $scores): ?int {
+        $scores = array_values(array_filter($scores, static fn($score): bool => $score !== null));
+        return $scores ? (int) round(array_sum($scores) / count($scores)) : null;
+    };
+
+    $read = $number('Sequential Read');
+    $write = $number('Sequential Write');
+    $random_read = $number('Random Read');
+    $random_write = $number('Random Write');
+    $capacity = $number('Capacity');
+    $endurance = $number('Endurance');
+    $power = $number('Power Draw');
+    $interface = $first('Interface');
+    $features = [
+        strcasecmp($first('TRIM'), 'Yes') === 0 ? 90 : null,
+        strcasecmp($first('SMART'), 'Yes') === 0 ? 90 : null,
+        strcasecmp($first('Power Loss Protection'), 'Yes') === 0 ? 100 : 45,
+        $first('Encryption') && strcasecmp($first('Encryption'), 'No') !== 0 ? 90 : null,
+    ];
+    $warranty = $number('Warranty');
+    $tbw_per_tb = ($endurance !== null && $capacity) ? $endurance / max(0.12, $capacity >= 100 ? $capacity / 1000 : $capacity) : null;
+    $categories = [
+        'performance' => ['label' => '성능', 'score' => $average([$scale($read, 14000), $scale($write, 12000), $scale($random_read, 2000000), $scale($random_write, 1800000)])],
+        'endurance' => ['label' => '내구성', 'score' => $average([$scale($tbw_per_tb, 1200), $scale($warranty, 5)])],
+        'features' => ['label' => '기능', 'score' => $average($features)],
+        'efficiency' => ['label' => '효율', 'score' => $power === null ? null : (int) round(max(15, min(100, 110 - ($power * 5))))],
+    ];
+    $weights = ['performance' => 0.45, 'endurance' => 0.25, 'features' => 0.20, 'efficiency' => 0.10];
+    $weighted = 0.0;
+    $used_weight = 0.0;
+    foreach ($categories as $key => $category) {
+        if ($category['score'] !== null) {
+            $weighted += $category['score'] * $weights[$key];
+            $used_weight += $weights[$key];
+        }
+    }
+    $overall = $used_weight >= 0.45 ? (int) round($weighted / $used_weight) : null;
+    $coverage = (int) round((count(array_filter([$read, $write, $random_read, $random_write, $endurance, $warranty, $power], static fn($v): bool => $v !== null)) / 7) * 100);
+    return compact('overall', 'categories', 'coverage', 'interface') + ['values' => $values];
+}
+
+function ps_ssd_faqs(int $post_id, array $scorecard): array
+{
+    $name = get_the_title($post_id);
+    $values = $scorecard['values'];
+    $first = static fn(string $key): string => (string) ($values[$key][0] ?? '정보 없음');
+    $ps5 = $first('PS5 Compatible');
+    $interface = $first('Interface');
+    $read = $first('Sequential Read');
+    return [
+        ['question' => $name . '의 인터페이스는 무엇인가요?', 'answer' => $interface === '정보 없음' ? '인터페이스 정보가 확인되지 않았습니다.' : $interface . ' 규격을 사용합니다. 장착할 시스템이 같은 규격을 지원하는지 확인해야 합니다.'],
+        ['question' => $name . '의 읽기 속도는 어느 정도인가요?', 'answer' => $read === '정보 없음' ? '공개된 순차 읽기 속도를 확인할 수 없습니다.' : '표기된 순차 읽기 속도는 ' . $read . '입니다. 실제 속도는 시스템과 작업 유형에 따라 달라질 수 있습니다.'],
+        ['question' => 'PlayStation 5에서 사용할 수 있나요?', 'answer' => strcasecmp($ps5, 'Yes') === 0 ? '수집된 사양에는 PS5 호환 제품으로 표시되어 있습니다. 장착 공간과 방열판 조건도 함께 확인하세요.' : (strcasecmp($ps5, 'No') === 0 ? '수집된 사양에는 PS5 비호환으로 표시되어 있습니다.' : 'PS5 호환 여부가 명시되지 않아 제조사의 최신 호환 정보를 확인해야 합니다.')],
+        ['question' => '스펙매치 자체 점수는 어떻게 계산하나요?', 'answer' => '가격을 제외하고 공개된 속도, 내구성, 기능, 소비전력 항목만 동일한 규칙으로 환산합니다. 누락된 항목은 점수 계산에서 제외합니다.'],
+    ];
+}
+
 function ps_related_tech_posts(int $post_id, string $post_type, int $limit = 4): array
 {
-    if (!in_array($post_type, ['laptop', 'cpu', 'gpu'], true)) {
+    if (!in_array($post_type, ['laptop', 'cpu', 'gpu', 'ssd'], true)) {
         return [];
+    }
+
+    if ($post_type === 'ssd') {
+        $cache_key = 'ps_ssd_related_' . $post_id . '_' . $limit;
+        $cached_ids = get_transient($cache_key);
+        if (is_array($cached_ids)) {
+            return array_values(array_filter(array_map('get_post', array_map('intval', $cached_ids))));
+        }
+        $source = ps_ssd_spec_values($post_id);
+        $source_capacity = (string) ($source['Capacity'][0] ?? '');
+        $source_interface = (string) ($source['Interface'][0] ?? '');
+        $source_brands = wp_get_post_terms($post_id, 'hardware_brand', ['fields' => 'ids']);
+        $source_brand = !is_wp_error($source_brands) ? (int) ($source_brands[0] ?? 0) : 0;
+        $candidates = get_posts([
+            'post_type' => 'ssd', 'post_status' => 'publish', 'post__not_in' => [$post_id],
+            'posts_per_page' => 40, 'meta_key' => '_catalog_release_date',
+            'orderby' => ['meta_value' => 'DESC', 'date' => 'DESC'], 'order' => 'DESC', 'no_found_rows' => true,
+        ]);
+        $ranked = [];
+        foreach ($candidates as $candidate) {
+            $candidate_values = ps_ssd_spec_values((int) $candidate->ID);
+            $candidate_brands = wp_get_post_terms($candidate->ID, 'hardware_brand', ['fields' => 'ids']);
+            $score = 0;
+            if ($source_capacity && $source_capacity === (string) ($candidate_values['Capacity'][0] ?? '')) $score += 45;
+            if ($source_interface && $source_interface === (string) ($candidate_values['Interface'][0] ?? '')) $score += 30;
+            if ($source_brand && !is_wp_error($candidate_brands) && in_array($source_brand, array_map('intval', $candidate_brands), true)) $score += 20;
+            $score += min(5, strtotime((string) get_post_meta($candidate->ID, '_catalog_release_date', true)) / 1000000000);
+            $ranked[] = ['post' => $candidate, 'score' => $score];
+        }
+        usort($ranked, static fn(array $a, array $b): int => $b['score'] <=> $a['score']);
+        $related = array_map(static fn(array $item): WP_Post => $item['post'], array_slice($ranked, 0, $limit));
+        set_transient($cache_key, wp_list_pluck($related, 'ID'), 12 * HOUR_IN_SECONDS);
+        return $related;
     }
 
     $term_ids = wp_get_post_terms($post_id, 'hardware_brand', ['fields' => 'ids']);
@@ -582,7 +809,7 @@ function ps_related_tech_posts(int $post_id, string $post_type, int $limit = 4):
 function ps_adjacent_catalog_posts(int $post_id): array
 {
     $post_type = get_post_type($post_id);
-    if (!in_array($post_type, ['phone', 'laptop', 'cpu', 'gpu'], true)) {
+    if (!in_array($post_type, ['phone', 'laptop', 'cpu', 'gpu', 'ssd'], true)) {
         return [];
     }
 
@@ -676,7 +903,7 @@ function ps_product_series_link(int $post_id): void
 function ps_recent_products_section(int $post_id): void
 {
     $post_type = (string) get_post_type($post_id);
-    if (!in_array($post_type, ['phone', 'laptop', 'cpu', 'gpu'], true)) {
+    if (!in_array($post_type, ['phone', 'laptop', 'cpu', 'gpu', 'ssd'], true)) {
         return;
     }
     $taxonomy = $post_type === 'phone' ? 'phone_brand' : 'hardware_brand';
@@ -818,8 +1045,13 @@ function ps_phone_sidebar_widget(string $title, string $type, array $posts): voi
 
 function ps_tech_sidebar_posts(string $post_type, string $mode = 'newest', int $limit = 5, string $brand = ''): array
 {
-    if (!in_array($post_type, ['laptop', 'cpu', 'gpu'], true)) {
+    if (!in_array($post_type, ['laptop', 'cpu', 'gpu', 'ssd'], true)) {
         return [];
+    }
+    $cache_key = 'ps_side_' . md5(implode('|', [$post_type, $mode, $limit, $brand]));
+    $cached_ids = get_transient($cache_key);
+    if (is_array($cached_ids)) {
+        return array_values(array_filter(array_map('get_post', $cached_ids)));
     }
     $args = [
         'post_type' => $post_type,
@@ -836,7 +1068,10 @@ function ps_tech_sidebar_posts(string $post_type, string $mode = 'newest', int $
             ));
             $measured = array_slice($measured, 0, $limit);
         }
-        if ($measured) return $measured;
+        if ($measured) {
+            set_transient($cache_key, wp_list_pluck($measured, 'ID'), HOUR_IN_SECONDS);
+            return $measured;
+        }
     }
     if ($brand !== '') {
         $args['tax_query'] = [[
@@ -852,7 +1087,9 @@ function ps_tech_sidebar_posts(string $post_type, string $mode = 'newest', int $
         $args['meta_key'] = '_catalog_release_date';
         $args['orderby'] = ['meta_value' => 'DESC', 'date' => 'DESC'];
     }
-    return get_posts($args);
+    $posts = get_posts($args);
+    set_transient($cache_key, wp_list_pluck($posts, 'ID'), 6 * HOUR_IN_SECONDS);
+    return $posts;
 }
 
 function ps_tech_sidebar_widget(string $title, string $mode, string $post_type, array $posts): void
@@ -861,7 +1098,7 @@ function ps_tech_sidebar_widget(string $title, string $mode, string $post_type, 
         return;
     }
     ?>
-    <section class="phone-side-widget phone-side-widget--<?php echo esc_attr($mode); ?>">
+    <section class="phone-side-widget phone-side-widget--<?php echo esc_attr($mode); ?><?php echo $post_type === 'ssd' ? ' phone-side-widget--text-only' : ''; ?>">
         <div class="side-widget-title">
             <span><?php echo $mode === 'popular' ? '높은 평가' : '새로 등록됨'; ?></span>
             <h2><?php echo esc_html($title); ?></h2>
@@ -948,6 +1185,7 @@ function ps_brand_navigation(): void
         ['laptop', '노트북'],
         ['cpu', 'CPU'],
         ['gpu', 'GPU'],
+        ['ssd', 'SSD'],
     ];
     ?>
     <nav class="brand-nav" aria-label="카테고리와 브랜드 바로가기">

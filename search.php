@@ -1,8 +1,8 @@
 <?php
 get_header();
 $search_type = sanitize_key((string) ($_GET['search_type'] ?? 'all'));
-if (!in_array($search_type, ['all', 'phone', 'laptop', 'cpu', 'gpu'], true)) $search_type = 'all';
-$search_types = ['all' => '전체', 'phone' => '스마트폰', 'laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU'];
+if (!in_array($search_type, ['all', 'phone', 'laptop', 'cpu', 'gpu', 'ssd'], true)) $search_type = 'all';
+$search_types = ['all' => '전체', 'phone' => '스마트폰', 'laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU', 'ssd' => 'SSD'];
 global $wp_query;
 ?>
 <main class="site-main shell" id="main-content">
@@ -40,7 +40,7 @@ global $wp_query;
             <?php $rank = ((max(1, get_query_var('paged')) - 1) * (int) $wp_query->get('posts_per_page')) + 1; while (have_posts()) : the_post(); ?>
                 <?php if (get_post_type() === 'phone') : ?>
                     <?php ps_phone_card(get_post(), $rank++); ?>
-                <?php elseif (in_array(get_post_type(), ['laptop', 'cpu', 'gpu'], true)) : ?>
+                <?php elseif (in_array(get_post_type(), ['laptop', 'cpu', 'gpu', 'ssd'], true)) : ?>
                     <?php ps_tech_card(get_post(), $rank++); ?>
                 <?php endif; ?>
             <?php endwhile; ?>

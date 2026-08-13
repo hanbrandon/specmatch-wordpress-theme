@@ -4,7 +4,7 @@ $type = sanitize_key((string) get_query_var('pc_series_type'));
 $slug = sanitize_title((string) get_query_var('pc_series_slug'));
 $posts = pc_series_posts();
 $label = $posts ? (string) get_post_meta($posts[0]->ID, '_catalog_series_label', true) : ucwords(str_replace('-', ' ', $slug));
-$type_labels = ['phone' => '스마트폰', 'laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU'];
+$type_labels = ['phone' => '스마트폰', 'laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU', 'ssd' => 'SSD'];
 if (!$posts) {
     status_header(404);
 }

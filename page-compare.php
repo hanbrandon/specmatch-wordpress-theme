@@ -12,7 +12,7 @@ get_header();
         <p>카테고리를 선택한 뒤 제품명 두 개를 검색해 비교하세요.</p>
     </header>
     <nav class="compare-categories" data-compare-categories aria-label="비교 카테고리">
-        <?php foreach (['phone' => '스마트폰', 'laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU'] as $type => $type_label) : ?>
+        <?php foreach (['phone' => '스마트폰', 'laptop' => '노트북', 'cpu' => 'CPU', 'gpu' => 'GPU', 'ssd' => 'SSD'] as $type => $type_label) : ?>
             <button type="button" class="<?php echo $type === 'phone' ? 'is-active' : ''; ?>" data-compare-type="<?php echo esc_attr($type); ?>"><?php echo esc_html($type_label); ?></button>
         <?php endforeach; ?>
     </nav>

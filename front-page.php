@@ -5,6 +5,7 @@ $catalogs = [
     ['laptop', '02', '노트북', '성능과 휴대성의 균형', '노트북'],
     ['cpu', '03', 'CPU', '연산 성능과 전력 효율', '프로세서'],
     ['gpu', '04', 'GPU', '그래픽 성능과 메모리', '그래픽카드'],
+    ['ssd', '05', 'SSD', '저장 성능과 내구성', 'SSD'],
 ];
 $total_count = array_sum(array_map(static fn(array $item): int => ps_catalog_count($item[0]), $catalogs));
 ?>
@@ -72,6 +73,7 @@ $total_count = array_sum(array_map(static fn(array $item): int => ps_catalog_cou
             <?php ps_home_catalog_list('laptop', '노트북', '주요 노트북'); ?>
             <?php ps_home_catalog_list('cpu', 'CPU', '주요 프로세서'); ?>
             <?php ps_home_catalog_list('gpu', 'GPU', '주요 그래픽카드'); ?>
+            <?php ps_home_catalog_list('ssd', 'SSD', '주요 SSD'); ?>
         </div>
         <aside class="home-widget-strip" aria-label="인기 및 최신 스마트폰">
             <?php ps_phone_sidebar_widget('많이 찾는 폰', 'popular', pc_sidebar_phone_posts('popular', 5)); ?>

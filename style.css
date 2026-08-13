@@ -3,7 +3,7 @@ Theme Name: SpecMatch
 Theme URI: https://specmatch.tech/
 Author: SpecMatch
 Description: 한국어 휴대폰 스펙, 비교, 구매 가이드를 위한 편집형 테마
-Version: 1.0.47
+Version: 1.0.51
 Requires at least: 6.6
 Requires PHP: 8.1
 Text Domain: phone-seoul
@@ -473,6 +473,9 @@ img { max-width: 100%; height: auto; }
 .phone-side-widget ol { margin: 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
 .phone-side-widget li { border-bottom: 1px solid var(--line); }
 .phone-side-widget a { display: grid; grid-template-columns: 22px 44px 1fr; gap: 10px; align-items: center; min-height: 72px; padding: 8px 0; text-decoration: none; }
+.phone-side-widget--text-only a { grid-template-columns: 24px minmax(0, 1fr); min-height: 66px; gap: 10px; }
+.phone-side-widget--text-only a > span { grid-column: 2 / -1; width: 100%; }
+.phone-side-widget--text-only strong { font-size: 11px; line-height: 1.35; overflow-wrap: break-word; word-break: keep-all; }
 .phone-side-widget a:hover { background: linear-gradient(90deg, rgba(199,255,47,.25), transparent); }
 .phone-side-widget b { color: var(--muted); font: 800 10px var(--display); }
 .phone-side-widget img { width: 44px; height: 54px; object-fit: contain; }
@@ -1184,6 +1187,22 @@ body::before {
 .tech-card__glyph { display: grid; height: 150px; place-items: center; color: #d0d5dd; font-size: 86px; }
 .tech-card h3 { margin: 15px 0 8px; font: 800 20px/1.15 var(--display); letter-spacing: -.035em; }
 .tech-card p { max-width: 30ch; color: var(--muted); font-size: 11px; }
+.post-type-archive-ssd .tech-card p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
+.ssd-archive-guide { display: grid; grid-template-columns: repeat(3, 1fr); margin: 34px 0 44px; border-top: 2px solid var(--ink); border-left: 1px solid var(--line); }
+.ssd-archive-guide > div { min-height: 150px; padding: 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ssd-archive-guide span { color: var(--blue); font: 700 9px var(--mono); }
+.ssd-archive-guide strong { display: block; margin-top: 18px; font: 800 16px var(--display); }
+.ssd-archive-guide p { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.65; word-break: keep-all; }
+.ssd-landing-links { display: flex; gap: 0; overflow-x: auto; margin-top: 22px; border: 1px solid var(--line); background: #fff; scrollbar-width: thin; }
+.ssd-landing-links > * { flex: 0 0 auto; padding: 13px 15px; border-right: 1px solid var(--line); font-size: 11px; white-space: nowrap; }
+.ssd-landing-links > span { color: var(--muted); font: 700 10px var(--mono); }
+.ssd-landing-links a { color: var(--ink); font-weight: 800; }
+.ssd-landing-links a:hover, .ssd-landing-links a.is-active { color: #0b1020; background: var(--acid); }
+.ssd-related-comparisons { display: grid; grid-template-columns: 140px 1fr; margin-top: 18px; border-top: 2px solid var(--ink); }
+.ssd-related-comparisons > * { padding: 14px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ssd-related-comparisons strong { color: var(--blue); font: 700 10px var(--mono); }
+.ssd-related-comparisons a { color: var(--ink); font-weight: 700; word-break: keep-all; }
+.ssd-related-comparisons a:hover { color: var(--blue); }
 .tech-card > a { position: absolute; inset: 0; font-size: 0; }
 .tech-card__score { position: absolute; right: 22px; bottom: 22px; font: 600 26px var(--mono); }
 .tech-card__score small { color: var(--muted); font-size: 9px; }
@@ -1424,6 +1443,95 @@ body::before {
 .tech-card__image img { width: 100%; height: 100%; object-fit: contain; }
 .tech-product-image { display: grid; min-height: 320px; margin: 0 0 48px; place-items: center; border: 1px solid var(--line); background: #fff; }
 .tech-product-image img { width: min(520px, 80%); max-height: 360px; object-fit: contain; }
+.ssd-vector { position: relative; display: grid; width: 230px; aspect-ratio: 1.58; align-content: center; justify-items: center; border: 2px solid var(--ink); background: #f6f7f3; color: var(--ink); overflow: hidden; }
+.ssd-vector::before,
+.ssd-vector::after { position: absolute; content: ""; }
+.ssd-vector::before { inset: 10px; background: radial-gradient(circle at left top, var(--ink) 0 3px, transparent 4px), radial-gradient(circle at right top, var(--ink) 0 3px, transparent 4px), radial-gradient(circle at left bottom, var(--ink) 0 3px, transparent 4px), radial-gradient(circle at right bottom, var(--ink) 0 3px, transparent 4px); }
+.ssd-vector::after { right: -2px; bottom: 18px; width: 42px; height: 15px; border-radius: 0; border-right: 0; background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 5px); }
+.ssd-vector > span { font: 900 48px/.85 var(--display); letter-spacing: -.06em; }
+.ssd-vector > small { margin-top: 10px; color: var(--blue); font: 700 8px var(--mono); letter-spacing: .16em; }
+.ssd-vector > i { position: absolute; inset: 24px; border: 1px solid var(--line); pointer-events: none; }
+.ssd-vector--hero { width: min(390px, 82%); }
+.ssd-vector--card { width: min(210px, 76%); margin: 8px auto 0; }
+.ssd-vector--card > span { font-size: 40px; }
+.ssd-vector--compare { width: 160px; }
+.ssd-vector--compare > span { font-size: 34px; }
+.tech-detail--ssd { padding-top: 72px; }
+.tech-detail--ssd h1 { max-width: 1180px; font-size: clamp(44px, 6.2vw, 88px); line-height: .94; }
+.tech-detail--ssd .tech-detail__body { max-width: 1180px; }
+.ssd-overview { display: grid; grid-template-columns: minmax(340px, .9fr) minmax(420px, 1.1fr); min-height: 430px; margin-bottom: 28px; border: 1px solid var(--ink); background: #fff; }
+.ssd-overview__visual { position: relative; display: grid; min-height: 430px; place-items: center; padding: 68px 38px 38px; border-right: 1px solid var(--ink); overflow: hidden; }
+.ssd-overview__visual > span { position: absolute; top: 22px; left: 24px; color: var(--blue); font: 700 10px var(--mono); letter-spacing: .14em; }
+.ssd-overview__visual img { width: min(440px, 88%); height: 290px; object-fit: contain; }
+.ssd-overview__content { display: flex; flex-direction: column; padding: 44px 42px 0; }
+.ssd-overview__content > p { margin: 0 0 13px; color: var(--blue); font: 700 10px var(--mono); letter-spacing: .12em; }
+.ssd-overview__content > h2 { max-width: 430px; margin: 0 0 34px; font: 800 clamp(30px, 3vw, 48px)/.98 var(--display); letter-spacing: -.05em; word-break: keep-all; }
+.ssd-overview__content dl { display: grid; grid-template-columns: 1fr 1fr; margin: auto -42px 0; border-top: 1px solid var(--line); }
+.ssd-overview__content dl > div { min-height: 88px; padding: 17px 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ssd-overview__content dl > div:nth-child(even) { border-right: 0; }
+.ssd-overview__content dt { margin-bottom: 8px; color: var(--muted); font-size: 10px; }
+.ssd-overview__content dd { margin: 0; font: 700 15px/1.35 var(--display); overflow-wrap: anywhere; }
+.tech-detail--ssd .tech-data-section { margin-top: 72px; }
+.tech-detail--ssd .tech-spec-group { grid-template-columns: 210px minmax(0, 1fr); }
+.tech-detail--ssd .tech-spec-group__heading { padding-top: 25px; }
+.tech-detail--ssd .tech-spec-group h3 { font-size: 18px; word-break: keep-all; }
+.tech-detail--ssd .tech-spec-group dt,
+.tech-detail--ssd .tech-spec-group dd { font-size: 12px; }
+.tech-detail--ssd .tech-spec-group dd { word-break: keep-all; overflow-wrap: anywhere; }
+.ssd-analysis { margin-top: 72px; }
+.ssd-analysis > header { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 3px solid var(--ink); }
+.ssd-analysis > header span { color: var(--blue); font: 700 10px var(--mono); letter-spacing: .12em; }
+.ssd-analysis > header h2 { max-width: 620px; margin: 0; font: 800 clamp(25px, 3vw, 42px)/1 var(--display); letter-spacing: -.045em; text-align: right; word-break: keep-all; }
+.ssd-analysis__grid { display: grid; grid-template-columns: repeat(3, 1fr); border-left: 1px solid var(--line); }
+.ssd-analysis__grid > section { min-height: 250px; padding: 25px 22px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ssd-analysis__grid > section > strong { color: var(--blue); font: 800 13px var(--display); }
+.ssd-analysis__grid ul { margin: 24px 0 0; padding: 0; list-style: none; }
+.ssd-analysis__grid li { position: relative; padding: 12px 0 12px 20px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.65; word-break: keep-all; }
+.ssd-analysis__grid li::before { position: absolute; top: 18px; left: 2px; width: 6px; height: 6px; background: var(--acid); border: 1px solid var(--ink); content: ""; }
+.ssd-analysis__terms { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+.ssd-analysis__terms p { display: grid; grid-template-columns: 110px 1fr; gap: 16px; margin: 0; padding: 18px 20px; font-size: 11px; line-height: 1.6; }
+.ssd-analysis__terms p + p { border-left: 1px solid var(--line); }
+.ssd-analysis__terms strong { color: var(--blue); }
+.ssd-analysis__method { margin: 12px 0 0; color: var(--muted); font-size: 10px; }
+.ssd-analysis__method a { color: var(--blue); font-weight: 700; }
+.ssd-answer { display: grid; grid-template-columns: 1fr 180px; align-items: stretch; margin: 34px 0 0; border: 2px solid var(--ink); background: #fff; }
+.ssd-answer > div:first-child { padding: 26px 30px; }
+.ssd-answer span, .ssd-faq header span, .ssd-compare-verdict > div:first-child > span { color: var(--blue); font: 700 10px var(--mono); letter-spacing: .08em; }
+.ssd-answer h2, .ssd-faq h2, .ssd-compare-verdict h2 { margin: 10px 0; font: 800 clamp(22px, 3vw, 38px)/1.08 var(--display); word-break: keep-all; }
+.ssd-answer p, .ssd-compare-verdict p { max-width: 760px; margin: 0; color: var(--muted); line-height: 1.7; word-break: keep-all; }
+.ssd-score-dial { display: flex; flex-wrap: wrap; align-content: center; justify-content: center; padding: 20px; color: #0b1020; background: var(--acid); border-left: 2px solid var(--ink); text-align: center; }
+.ssd-score-dial strong { font: 800 68px/.8 var(--display); }
+.ssd-score-dial small { align-self: center; font: 700 13px var(--mono); }
+.ssd-score-dial span { flex-basis: 100%; margin-top: 14px; color: #0b1020; letter-spacing: 0; }
+.ssd-scorecard { display: grid; grid-template-columns: repeat(4, 1fr); border-left: 1px solid var(--line); }
+.ssd-scorecard > div { padding: 18px 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ssd-scorecard span { display: block; color: var(--muted); font-size: 12px; }
+.ssd-scorecard strong { display: block; margin: 8px 0; font: 800 28px var(--display); }
+.ssd-scorecard progress { width: 100%; height: 5px; accent-color: var(--blue); }
+.ssd-faq { margin: 34px 0; border-top: 2px solid var(--ink); }
+.ssd-faq header { padding: 24px 0 12px; }
+.ssd-faq details { border-bottom: 1px solid var(--line); }
+.ssd-faq summary { padding: 18px 4px; font-weight: 800; cursor: pointer; word-break: keep-all; }
+.ssd-faq details p { margin: 0; padding: 0 4px 20px; color: var(--muted); line-height: 1.7; word-break: keep-all; }
+.ssd-source-note { display: grid; grid-template-columns: 160px 1fr auto; gap: 20px; align-items: center; margin: 30px 0; padding: 20px; border: 1px solid var(--line); background: #f7f8fa; }
+.ssd-source-note p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.ssd-source-note a { color: var(--blue); font-weight: 700; }
+.ssd-source-note span { color: var(--muted); font: 600 10px var(--mono); }
+.ssd-compare-verdict { margin: 36px 0; padding: 28px; border: 2px solid var(--ink); background: #fff; }
+.ssd-compare-overall { display: grid; grid-template-columns: 1fr 48px 1fr; align-items: stretch; margin-top: 24px; }
+.ssd-compare-overall article { position: relative; padding: 20px; border: 1px solid var(--line); }
+.ssd-compare-overall article.is-winner { border: 2px solid var(--blue); background: #f4f7ff; }
+.ssd-compare-overall article > span { display: block; min-height: 38px; color: var(--muted); font-size: 12px; word-break: keep-all; }
+.ssd-compare-overall article strong { font: 800 48px var(--display); }
+.ssd-compare-overall article small { font-size: 12px; }
+.ssd-compare-overall article b, .ssd-compare-category-grid span b, .compare-row .is-spec-winner b { display: inline-block; margin-left: 8px; padding: 4px 7px; color: #fff; background: var(--blue); font: 700 9px var(--mono); }
+.ssd-compare-overall > i { display: grid; place-items: center; font: 800 11px var(--mono); }
+.ssd-compare-category-grid { margin-top: 18px; border-top: 1px solid var(--line); }
+.ssd-compare-category-grid > div { display: grid; grid-template-columns: minmax(120px, 1fr) 1fr 1fr; border-bottom: 1px solid var(--line); }
+.ssd-compare-category-grid > div > * { padding: 13px; border-right: 1px solid var(--line); }
+.ssd-compare-category-grid span { font-weight: 800; }
+.ssd-compare-category-grid .is-better { color: var(--blue); background: #f4f7ff; }
+.compare-row .is-spec-winner { color: var(--blue); background: #f4f7ff; font-weight: 800; }
 .tech-data-note { display: grid; grid-template-columns: 150px 1fr auto; gap: 22px; align-items: start; padding: 18px 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line); }
 .tech-data-note strong { color: var(--blue); font: 700 10px var(--mono); letter-spacing: .06em; }
 .tech-data-note p { max-width: 62ch; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
@@ -1496,6 +1604,40 @@ body::before {
 
 @media (max-width: 560px) {
   .tech-card__image { height: 110px; }
+  .tech-detail--ssd { padding-top: 42px; }
+  .tech-detail--ssd h1 { margin: 20px 0 30px; font-size: clamp(37px, 12vw, 58px); line-height: .97; }
+  .tech-detail--ssd .tech-detail__body { margin-top: 34px; }
+  .ssd-overview { grid-template-columns: 1fr; min-height: 0; }
+  .ssd-overview__visual { min-height: 270px; padding: 55px 22px 25px; border-right: 0; border-bottom: 1px solid var(--ink); }
+  .ssd-vector--hero { width: min(280px, 82%); }
+  .ssd-vector--card { width: min(170px, 72%); }
+  .ssd-overview__content { padding: 28px 20px 0; }
+  .ssd-overview__content > h2 { margin-bottom: 25px; font-size: 30px; }
+  .ssd-overview__content dl { margin: 0 -20px; }
+  .ssd-overview__content dl > div { min-height: 78px; padding: 14px 15px; }
+  .ssd-overview__content dd { font-size: 13px; }
+  .tech-detail--ssd .tech-data-section { margin-top: 54px; }
+  .tech-detail--ssd .tech-spec-group { grid-template-columns: 1fr; }
+  .tech-detail--ssd .tech-spec-group h3 { font-size: 16px; }
+  .ssd-analysis { margin-top: 54px; }
+  .ssd-analysis > header { display: block; }
+  .ssd-analysis > header h2 { margin-top: 10px; font-size: 30px; text-align: left; }
+  .ssd-analysis__grid { grid-template-columns: 1fr; }
+  .ssd-analysis__grid > section { min-height: 0; padding: 20px 16px; }
+  .ssd-analysis__terms { grid-template-columns: 1fr; }
+  .ssd-analysis__terms p { grid-template-columns: 90px 1fr; padding: 16px; }
+  .ssd-analysis__terms p + p { border-top: 1px solid var(--line); border-left: 0; }
+  .ssd-archive-guide { grid-template-columns: 1fr; margin: 24px 0 34px; }
+  .ssd-archive-guide > div { min-height: 0; }
+  .ssd-answer { grid-template-columns: 1fr; }
+  .ssd-score-dial { min-height: 150px; border-top: 2px solid var(--ink); border-left: 0; }
+  .ssd-scorecard { grid-template-columns: repeat(2, 1fr); }
+  .ssd-source-note { grid-template-columns: 1fr; gap: 8px; }
+  .ssd-compare-verdict { padding: 18px 14px; }
+  .ssd-compare-overall { grid-template-columns: 1fr; }
+  .ssd-compare-overall > i { min-height: 36px; }
+  .ssd-compare-category-grid > div { grid-template-columns: 84px 1fr 1fr; }
+  .ssd-related-comparisons { grid-template-columns: 1fr; }
   .tech-data-note { grid-template-columns: 1fr; gap: 8px; }
   .tech-score-grid { grid-template-columns: repeat(2, 1fr); }
   .tech-config-row, .tech-spec-group { grid-template-columns: 1fr; gap: 0; }

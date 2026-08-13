@@ -23,6 +23,7 @@
                     'laptop' => ['노트북', '노트북 브랜드', '브랜드별 노트북', '제조사별 노트북을 한 번에 확인하세요.'],
                     'cpu' => ['CPU', '프로세서 브랜드', '브랜드별 CPU', '제조사별 프로세서를 빠르게 찾아보세요.'],
                     'gpu' => ['GPU', '그래픽카드 브랜드', '브랜드별 GPU', '제조사별 그래픽 프로세서를 확인하세요.'],
+                    'ssd' => ['SSD', 'SSD 브랜드', '브랜드별 SSD', '제조사별 SSD와 용량별 사양을 확인하세요.'],
                 ];
                 foreach ($catalog_menu as $type => [$menu_label, $eyebrow, $heading, $description]) :
                     $brands = ps_catalog_brands($type);

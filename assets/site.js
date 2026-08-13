@@ -131,11 +131,13 @@
   const initialSlug = initialParams.get("phone");
   const initialName = initialParams.get("name");
   const initialPostId = initialParams.get("post_id");
+  const initialType = initialParams.get("type");
   const keywordsByType = {
     phone: ["Samsung", "Apple", "Google", "Xiaomi", "Huawei", "LG"],
     laptop: ["Apple", "Samsung", "Lenovo", "Dell", "HP", "Asus"],
     cpu: ["Intel", "AMD", "Apple", "Snapdragon"],
     gpu: ["Nvidia", "AMD", "Intel", "Apple"],
+    ssd: ["Samsung", "Western Digital", "Crucial", "Seagate", "Corsair", "Kingston"],
   };
 
   const updateKeywords = (type) => {
@@ -155,6 +157,14 @@
       picker.querySelector("[data-selected-slug]").value
     );
   };
+
+  if (["phone", "laptop", "cpu", "gpu", "ssd"].includes(initialType)) {
+    builder.dataset.currentType = initialType;
+    updateKeywords(initialType);
+    categoryBar?.querySelectorAll("[data-compare-type]").forEach((item) => {
+      item.classList.toggle("is-active", item.dataset.compareType === initialType);
+    });
+  }
 
   pickers.forEach((picker) => {
     const input = picker.querySelector('input[type="search"]');
@@ -289,7 +299,7 @@
     const link = document.createElement("a");
     link.href = item.url;
 
-    if (item.image) {
+    if (item.image && item.type !== "ssd") {
       const image = document.createElement("img");
       image.src = item.image;
       image.alt = "";
