@@ -785,6 +785,140 @@ function ps_ssd_product_status(int $post_id): array
     return ['key' => 'unknown', 'label' => '상태 미상'];
 }
 
+function ps_ssd_numeric(array $values, string $field): ?float
+{
+    $value = (string) ($values[$field][0] ?? '');
+    if ($field === 'Power Draw' && preg_match('/([\d.]+)\s*W\s*\(Avg\)/i', $value, $match)) return (float) $match[1];
+    return $value !== '' && preg_match('/[\d,.]+/', $value, $match) ? (float) str_replace(',', '', $match[0]) : null;
+}
+
+function ps_ssd_capacity_tb(array $values): ?float
+{
+    $value = (string) ($values['Capacity'][0] ?? '');
+    if (!preg_match('/[\d,.]+/', $value, $match)) return null;
+    $number = (float) str_replace(',', '', $match[0]);
+    return stripos($value, 'GB') !== false ? $number / 1000 : $number;
+}
+
+function ps_ssd_interface_family(string $interface): string
+{
+    foreach (['PCIe 5', 'PCIe 4', 'PCIe 3', 'PCIe 2', 'SATA', 'SAS'] as $family) if (stripos($interface, $family) !== false) return strtolower(str_replace(' ', '-', $family));
+    return 'other';
+}
+
+function ps_ssd_peer_dataset(): array
+{
+    $cached = get_transient('ps_ssd_peer_dataset_v2');
+    if (is_array($cached)) return $cached;
+    $ids = get_posts(['post_type' => 'ssd', 'post_status' => 'publish', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true]);
+    $dataset = [];
+    foreach ($ids as $id) {
+        $values = ps_ssd_spec_values((int) $id);
+        $capacity = ps_ssd_capacity_tb($values);
+        $endurance = ps_ssd_numeric($values, 'Endurance');
+        $dataset[(int) $id] = [
+            'interface' => ps_ssd_interface_family((string) ($values['Interface'][0] ?? '')),
+            'market' => stripos((string) ($values['Market'][0] ?? ''), 'Enterprise') !== false ? 'enterprise' : 'consumer',
+            'capacity' => $capacity,
+            'read' => ps_ssd_numeric($values, 'Sequential Read'),
+            'write' => ps_ssd_numeric($values, 'Sequential Write'),
+            'endurance_per_tb' => $endurance !== null && $capacity ? $endurance / max(.12, $capacity) : null,
+            'power' => ps_ssd_numeric($values, 'Power Draw'),
+        ];
+    }
+    set_transient('ps_ssd_peer_dataset_v2', $dataset, 12 * HOUR_IN_SECONDS);
+    return $dataset;
+}
+
+function ps_clear_ssd_analysis_cache(): void
+{
+    delete_transient('ps_ssd_peer_dataset_v2');
+    delete_transient('pc_low_value_ssd_ids_v1');
+}
+add_action('save_post_ssd', 'ps_clear_ssd_analysis_cache');
+
+function ps_ssd_peer_analysis(int $post_id): array
+{
+    $dataset = ps_ssd_peer_dataset();
+    $current = $dataset[$post_id] ?? null;
+    if (!$current) return ['count' => 0, 'metrics' => [], 'position' => '동급 비교 데이터가 충분하지 않습니다.'];
+    $peers = array_filter($dataset, static function (array $item) use ($current): bool {
+        if ($item['interface'] !== $current['interface'] || $item['market'] !== $current['market']) return false;
+        if (!$current['capacity'] || !$item['capacity']) return true;
+        return abs($item['capacity'] - $current['capacity']) <= max(.15, $current['capacity'] * .12);
+    });
+    if (count($peers) < 10) $peers = array_filter($dataset, static fn(array $item): bool => $item['interface'] === $current['interface'] && $item['market'] === $current['market']);
+    $metrics = [];
+    foreach (['read' => ['순차 읽기', false], 'write' => ['순차 쓰기', false], 'endurance_per_tb' => ['용량당 내구성', false], 'power' => ['평균 소비전력', true]] as $key => [$label, $lower_better]) {
+        if ($current[$key] === null) continue;
+        $numbers = array_values(array_filter(array_column($peers, $key), static fn($value): bool => $value !== null));
+        if (count($numbers) < 5) continue;
+        sort($numbers, SORT_NUMERIC);
+        $better = count(array_filter($numbers, static fn(float $value): bool => $lower_better ? $value >= $current[$key] : $value <= $current[$key]));
+        $percentile = (int) round(($better / count($numbers)) * 100);
+        $middle = count($numbers) / 2;
+        $median = count($numbers) % 2 ? $numbers[(int) floor($middle)] : ($numbers[(int) $middle - 1] + $numbers[(int) $middle]) / 2;
+        $metrics[$key] = compact('label', 'percentile', 'median') + ['value' => $current[$key], 'lower_better' => $lower_better];
+    }
+    $position = '같은 ' . strtoupper(str_replace('-', ' ', $current['interface'])) . ' ' . ($current['market'] === 'enterprise' ? '기업용' : '소비자용') . ' 제품군과 비교했습니다.';
+    return ['count' => count($peers), 'metrics' => $metrics, 'position' => $position];
+}
+
+function ps_ssd_compatibility_and_fit(int $post_id): array
+{
+    $values = ps_ssd_spec_values($post_id);
+    $interface = (string) ($values['Interface'][0] ?? '정보 없음');
+    $form = (string) ($values['Form Factor'][0] ?? '정보 없음');
+    $market = (string) ($values['Market'][0] ?? '');
+    $ps5 = (string) ($values['PS5 Compatible'][0] ?? 'Unknown');
+    $read = ps_ssd_numeric($values, 'Sequential Read') ?? 0;
+    $endurance = ps_ssd_numeric($values, 'Endurance');
+    $recommended = [];
+    $not_recommended = [];
+    $compatibility = ['인터페이스: ' . $interface, '폼팩터: ' . $form];
+    if (stripos($interface, 'PCIe') !== false) $compatibility[] = '낮은 PCIe 세대 슬롯에서도 작동할 수 있지만 최대 속도는 슬롯 규격에 제한됩니다.';
+    if (stripos($interface, 'SATA') !== false) $compatibility[] = 'NVMe 전용 M.2 슬롯과는 호환되지 않을 수 있어 SATA 지원 여부를 확인해야 합니다.';
+    $compatibility[] = strcasecmp($ps5, 'Yes') === 0 ? 'PS5 호환으로 표시된 제품입니다.' : (strcasecmp($ps5, 'No') === 0 ? 'PS5 비호환으로 표시된 제품입니다.' : 'PS5 호환 여부는 확인되지 않았습니다.');
+    if (stripos($market, 'Enterprise') !== false) {
+        $recommended[] = '서버·워크스테이션의 지속적인 쓰기 작업';
+        $not_recommended[] = '일반 노트북이나 PS5처럼 기업용 규격을 활용하지 못하는 환경';
+    } else {
+        $recommended[] = $read >= 5000 ? '게임 설치와 대용량 앱 실행' : '운영체제와 일반 프로그램 저장';
+        if ($endurance !== null && $endurance >= 1000) $recommended[] = '쓰기 작업이 비교적 많은 작업용 PC';
+        if (stripos(implode(' ', $values['Type'] ?? []), 'QLC') !== false) $not_recommended[] = '장시간 대용량 파일을 반복해서 쓰는 전문 작업';
+    }
+    if (stripos(implode(' ', $values['Controller Features'] ?? []), 'HMB') !== false) $not_recommended[] = '별도 DRAM 캐시를 최우선으로 원하는 사용자';
+    if (!$not_recommended) $not_recommended[] = '실측 벤치마크만으로 구매를 결정하려는 경우';
+    return compact('compatibility', 'recommended', 'not_recommended');
+}
+
+function ps_ssd_content_grade(int $post_id): string
+{
+    $values = ps_ssd_spec_values($post_id);
+    $spec_count = count(ps_ssd_specs($post_id));
+    $required = count(array_filter(['Capacity', 'Interface', 'Sequential Read', 'Sequential Write', 'Endurance', 'Warranty'], static fn(string $key): bool => !empty($values[$key][0]) && strcasecmp((string) $values[$key][0], 'Unknown') !== 0));
+    $release = (string) get_post_meta($post_id, '_catalog_release_date', true);
+    $status = ps_ssd_product_status($post_id)['key'];
+    if ($spec_count >= 40 && $required >= 5 && $release && in_array($status, ['active', 'upcoming'], true)) return 'A';
+    if ($spec_count >= 30 && $required >= 4 && $release && $status !== 'unknown') return 'B';
+    return 'C';
+}
+
+function ps_ssd_alternative_reason(int $source_id, int $candidate_id): string
+{
+    $source = ps_ssd_spec_values($source_id);
+    $candidate = ps_ssd_spec_values($candidate_id);
+    $source_read = ps_ssd_numeric($source, 'Sequential Read');
+    $candidate_read = ps_ssd_numeric($candidate, 'Sequential Read');
+    $source_endurance = ps_ssd_numeric($source, 'Endurance');
+    $candidate_endurance = ps_ssd_numeric($candidate, 'Endurance');
+    if ($candidate_read !== null && $source_read !== null && $candidate_read > $source_read * 1.12) return '더 높은 순차 읽기 성능을 원하는 경우 살펴볼 대안입니다.';
+    if ($candidate_endurance !== null && $source_endurance !== null && $candidate_endurance > $source_endurance * 1.2) return '표기 쓰기 내구성이 더 높은 대안입니다.';
+    if (($candidate['Capacity'][0] ?? '') === ($source['Capacity'][0] ?? '')) return '같은 용량에서 사양과 기능 구성을 비교하기 좋은 제품입니다.';
+    if (($candidate['Interface'][0] ?? '') === ($source['Interface'][0] ?? '')) return '같은 인터페이스 규격을 사용하는 대안입니다.';
+    return '같은 제품군에서 함께 비교할 수 있는 대안입니다.';
+}
+
 function ps_ssd_faqs(int $post_id, array $scorecard): array
 {
     $name = get_the_title($post_id);
@@ -793,12 +927,20 @@ function ps_ssd_faqs(int $post_id, array $scorecard): array
     $ps5 = $first('PS5 Compatible');
     $interface = $first('Interface');
     $read = $first('Sequential Read');
-    return [
+    $faqs = [
         ['question' => $name . '의 인터페이스는 무엇인가요?', 'answer' => $interface === '정보 없음' ? '인터페이스 정보가 확인되지 않았습니다.' : $interface . ' 규격을 사용합니다. 장착할 시스템이 같은 규격을 지원하는지 확인해야 합니다.'],
         ['question' => $name . '의 읽기 속도는 어느 정도인가요?', 'answer' => $read === '정보 없음' ? '공개된 순차 읽기 속도를 확인할 수 없습니다.' : '표기된 순차 읽기 속도는 ' . $read . '입니다. 실제 속도는 시스템과 작업 유형에 따라 달라질 수 있습니다.'],
         ['question' => 'PlayStation 5에서 사용할 수 있나요?', 'answer' => strcasecmp($ps5, 'Yes') === 0 ? '수집된 사양에는 PS5 호환 제품으로 표시되어 있습니다. 장착 공간과 방열판 조건도 함께 확인하세요.' : (strcasecmp($ps5, 'No') === 0 ? '수집된 사양에는 PS5 비호환으로 표시되어 있습니다.' : 'PS5 호환 여부가 명시되지 않아 제조사의 최신 호환 정보를 확인해야 합니다.')],
         ['question' => '스펙매치 자체 점수는 어떻게 계산하나요?', 'answer' => '가격을 제외하고 공개된 속도, 내구성, 기능, 소비전력 항목만 동일한 규칙으로 환산합니다. 누락된 항목은 점수 계산에서 제외합니다.'],
     ];
+    $controller = implode(' ', $values['Controller Features'] ?? []);
+    $types = implode(' ', $values['Type'] ?? []);
+    if (stripos($controller, 'DRAM') !== false) $faqs[] = ['question' => $name . '에 DRAM이 있나요?', 'answer' => '컨트롤러 사양에 DRAM 탑재 제품으로 표시되어 있습니다.'];
+    elseif (stripos($controller, 'HMB') !== false) $faqs[] = ['question' => $name . '에 DRAM이 있나요?', 'answer' => '별도 DRAM 대신 시스템 메모리를 활용하는 HMB 구성으로 표시되어 있습니다.'];
+    elseif (stripos($types, 'None') !== false) $faqs[] = ['question' => $name . '에 DRAM이 있나요?', 'answer' => '수집된 사양에는 별도 DRAM이 없는 구성으로 표시되어 있습니다.'];
+    $endurance = $first('Endurance');
+    if ($endurance !== '정보 없음' && strcasecmp($endurance, 'Unknown') !== 0) $faqs[] = ['question' => $name . '의 쓰기 내구성은 얼마인가요?', 'answer' => '표기 쓰기 내구성은 ' . $endurance . '입니다. 실제 수명은 쓰기 패턴과 온도, 여유 공간에 따라 달라질 수 있습니다.'];
+    return array_slice($faqs, 0, 6);
 }
 
 function ps_related_tech_posts(int $post_id, string $post_type, int $limit = 4): array

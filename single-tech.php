@@ -53,6 +53,8 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
             $ssd_scorecard = ps_ssd_scorecard((int) get_the_ID());
             $ssd_faqs = ps_ssd_faqs((int) get_the_ID(), $ssd_scorecard);
             $ssd_status = ps_ssd_product_status((int) get_the_ID());
+            $ssd_peer_analysis = ps_ssd_peer_analysis((int) get_the_ID());
+            $ssd_fit = ps_ssd_compatibility_and_fit((int) get_the_ID());
         } else {
             foreach ($specs as $spec) {
                 $groups[(string) ($spec['section'] ?? 'Specifications')][] = $spec;
@@ -137,6 +139,20 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                                 <?php if ($category['score'] !== null) : ?><progress max="100" value="<?php echo esc_attr((string) $category['score']); ?>"></progress><?php endif; ?>
                             </div>
                         <?php endforeach; ?>
+                    </section>
+                    <?php if ($ssd_peer_analysis['metrics']) : ?>
+                        <section class="ssd-peer-analysis" aria-labelledby="ssd-peer-title">
+                            <header><span>자체 데이터 분석</span><h2 id="ssd-peer-title">동급 제품에서의 위치</h2><p><?php echo esc_html($ssd_peer_analysis['position']); ?> 비교 표본은 <?php echo esc_html(number_format_i18n($ssd_peer_analysis['count'])); ?>개입니다.</p></header>
+                            <div class="ssd-peer-grid">
+                                <?php foreach ($ssd_peer_analysis['metrics'] as $metric) : ?>
+                                    <article><span><?php echo esc_html($metric['label']); ?></span><strong>상위 <?php echo esc_html((string) max(1, 101 - $metric['percentile'])); ?>%</strong><p>동급 중앙값 <?php echo esc_html(number_format_i18n($metric['median'], 1)); ?><?php echo $metric['label'] === '평균 소비전력' ? ' W' : ($metric['label'] === '용량당 내구성' ? ' TBW/TB' : ''); ?></p><progress max="100" value="<?php echo esc_attr((string) $metric['percentile']); ?>"></progress></article>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                    <?php endif; ?>
+                    <section class="ssd-fit-guide" aria-labelledby="ssd-fit-title">
+                        <header><span>실사용 판단</span><h2 id="ssd-fit-title">호환성과 추천 대상</h2></header>
+                        <div><article><strong>장착 전 확인</strong><ul><?php foreach ($ssd_fit['compatibility'] as $item) : ?><li><?php echo esc_html($item); ?></li><?php endforeach; ?></ul></article><article><strong>추천 사용자</strong><ul><?php foreach ($ssd_fit['recommended'] as $item) : ?><li><?php echo esc_html($item); ?></li><?php endforeach; ?></ul></article><article><strong>다른 제품이 나을 수 있는 경우</strong><ul><?php foreach ($ssd_fit['not_recommended'] as $item) : ?><li><?php echo esc_html($item); ?></li><?php endforeach; ?></ul></article></div>
                     </section>
                     <section class="ssd-analysis" aria-labelledby="ssd-analysis-title">
                         <header><span>구매 판단 가이드</span><h2 id="ssd-analysis-title">이 SSD를 어떻게 봐야 할까요?</h2></header>
@@ -329,7 +345,7 @@ $label = ['laptop' => '노트북', 'cpu' => '프로세서', 'gpu' => '그래픽�
                         <nav class="ssd-related-comparisons" aria-label="추천 SSD 비교">
                             <strong>추천 비교</strong>
                             <?php foreach ($related_products as $related_product) : ?>
-                                <a href="<?php echo esc_url(pc_compare_tech_url(get_post(), $related_product)); ?>"><?php the_title(); ?> vs <?php echo esc_html($related_product->post_title); ?></a>
+                                <a href="<?php echo esc_url(pc_compare_tech_url(get_post(), $related_product)); ?>"><strong><?php the_title(); ?> vs <?php echo esc_html($related_product->post_title); ?></strong><span><?php echo esc_html(ps_ssd_alternative_reason((int) get_the_ID(), (int) $related_product->ID)); ?></span></a>
                             <?php endforeach; ?>
                         </nav>
                     <?php endif; ?>
